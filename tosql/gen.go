@@ -36,7 +36,7 @@ type ActionResult struct {
 	Data   string
 }
 
-func Generate(ctx context.Context, req GenerateRequest) (*GenerateResponse, error) {
+func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, error) {
 	configvalues := req.Configvalues
 	if len(configvalues.Entities) == 0 || len(configvalues.Actions) == 0 {
 		return nil, errors.New("invalid request")
