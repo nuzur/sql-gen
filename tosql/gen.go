@@ -25,9 +25,10 @@ type GenerateRequest struct {
 }
 
 type GenerateResponse struct {
-	WorkingDir string
-	ZipFile    string
-	Results    []ActionResult
+	ExecutionUUID string
+	WorkingDir    string
+	ZipFile       string
+	Results       []ActionResult
 }
 
 type ActionResult struct {
@@ -97,9 +98,10 @@ func Generate(ctx context.Context, req GenerateRequest) (*GenerateResponse, erro
 	}
 
 	return &GenerateResponse{
-		WorkingDir: path.Join("executions", req.ExecutionUUID),
-		ZipFile:    path.Join("executions", fmt.Sprintf("%s.zip", req.ExecutionUUID)),
-		Results:    results,
+		ExecutionUUID: req.ExecutionUUID,
+		WorkingDir:    path.Join("executions", req.ExecutionUUID),
+		ZipFile:       path.Join("executions", fmt.Sprintf("%s.zip", req.ExecutionUUID)),
+		Results:       results,
 	}, nil
 }
 
