@@ -1,6 +1,10 @@
 package tosql
 
-import "github.com/nuzur/sql-gen/db"
+import (
+	"encoding/json"
+
+	"github.com/nuzur/sql-gen/db"
+)
 
 type Action string
 
@@ -18,4 +22,18 @@ type ConfigValues struct {
 	DBType   db.DBType `json:"db_type"`
 	Entities []string  `json:"entities"`
 	Actions  []Action  `json:"actions"`
+}
+
+func ConfigValuesFromAny(any interface{}) (*ConfigValues, error) {
+	configValues := &ConfigValues{}
+	bytes, err := json.Marshal(any)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(bytes, configValues)
+	if err != nil {
+		return nil, err
+	}
+	return configValues, nil
 }
