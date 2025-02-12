@@ -1,13 +1,14 @@
 package fromsql
 
 import (
+	"context"
 	"errors"
 
 	nemgen "github.com/nuzur/nem/idl/gen"
 	"github.com/nuzur/sql-gen/db"
 )
 
-func Generate(params Params) (*nemgen.ProjectVersion, error) {
+func Generate(ctx context.Context, params GenerateRequest) (*nemgen.ProjectVersion, error) {
 	rt := New(params)
 
 	if params.DBType == db.MYSQLDBType {

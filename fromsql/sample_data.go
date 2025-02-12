@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func (rt *sqlremote) SampleTableValues(name string) (remoteRows, error) {
+func (rt *sqlremote) sampleTableValues(name string) (remoteRows, error) {
 	// Get Data
 	query := fmt.Sprintf(`SELECT * FROM %s AS t1 JOIN 
 		(SELECT id FROM %s ORDER BY RAND() LIMIT 10) 

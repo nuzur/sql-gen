@@ -6,7 +6,7 @@ import (
 	"github.com/nuzur/sql-gen/db"
 )
 
-func New(params Params) *sqlremote {
+func New(params GenerateRequest) *sqlremote {
 	return &sqlremote{
 		userConnection: params.UserConnection,
 		sqlConnection:  params.SQLConnection,
@@ -15,7 +15,7 @@ func New(params Params) *sqlremote {
 	}
 }
 
-func (rt *sqlremote) GetTableNames() ([]string, error) {
+func (rt *sqlremote) getTableNames() ([]string, error) {
 	// Get table list
 	query := ""
 	if rt.dbType == db.MYSQLDBType {

@@ -30,7 +30,7 @@ type mysqlIndexDetails struct {
 }
 
 func (rt *sqlremote) buildProjectVersionFromMysql() (*nemgen.ProjectVersion, error) {
-	tableNames, err := rt.GetTableNames()
+	tableNames, err := rt.getTableNames()
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (rt *sqlremote) buildFieldsFromMysql(tableName string) ([]*nemgen.Field, er
 		tableName,
 	)
 
-	sampleData, err := rt.SampleTableValues(tableName)
+	sampleData, err := rt.sampleTableValues(tableName)
 	if err != nil {
 		return nil, err
 	}

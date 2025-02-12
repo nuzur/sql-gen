@@ -6,7 +6,7 @@ import (
 	"github.com/nuzur/sql-gen/db"
 )
 
-type Params struct {
+type GenerateRequest struct {
 	UserConnection *nemgen.UserConnection
 	SQLConnection  *sqlx.DB
 	DBType         db.DBType
