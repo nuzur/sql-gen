@@ -1,0 +1,9 @@
+{{- range $entity := .Entities -}}
+-- name: Update{{$entity.NameTitle}} :exec
+UPDATE "{{$entity.Name}}"
+SET
+{{$entity.UpdateFields}}
+WHERE
+{{$entity.PrimaryKeysWhereClause}};
+
+{{end -}}

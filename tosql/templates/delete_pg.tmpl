@@ -1,0 +1,7 @@
+{{- range $entity := .Entities -}}
+-- name: Delete{{$entity.NameTitle}} :execresult
+DELETE FROM "{{$entity.Name}}"
+WHERE
+{{$entity.PrimaryKeysWhereClause}};
+
+{{end -}}

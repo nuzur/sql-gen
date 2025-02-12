@@ -1,0 +1,9 @@
+{{- range $entity := .Entities -}}
+-- name: Fetch{{$entity.NameTitle}} :many
+SELECT {{ range $field := $entity.Fields -}}
+            "{{$field.Name}}"
+            {{- if eq $field.HasComma true}},{{end -}}
+        {{- end}}
+FROM "{{$entity.Name}}";
+
+{{end -}}
