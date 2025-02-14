@@ -32,7 +32,7 @@ func GenerateSQL(ctx context.Context, params GenerateRequest) (*tosql.GenerateRe
 		entities := []string{}
 		for _, e := range pv.Entities {
 			if e.Type == nemgen.EntityType_ENTITY_TYPE_STANDALONE {
-				entities = append(entities, e.Identifier)
+				entities = append(entities, e.Uuid)
 			}
 		}
 		return tosql.GenerateSQL(ctx, tosql.GenerateRequest{
