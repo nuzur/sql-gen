@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS `{{$entity.Name}}` (
     {{$index.TypePrefix}}INDEX `{{$index.Name}}` {{$index.FieldNamesIdentifiers}}
             {{- if eq $index.HasComma true }},{{end -}}
         {{- end}}
-    {{- end}}{{- if ne (len $entity.Constraints) 0}},{{end -}}
+    {{- end}}{{- if and (ne (len $entity.Indexes) 0) (ne (len $entity.Constraints) 0)}},{{end -}}
     {{- /* constrains */ -}}
     {{- range $constraint := $entity.Constraints }}
     CONSTRAINT `{{$constraint.Name}}`
