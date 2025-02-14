@@ -29,12 +29,18 @@ func GenerateSQL(ctx context.Context, params GenerateRequest) (*tosql.GenerateRe
 			return nil, err
 		}
 
+		entities := []string{}
+		for _, e := range pv.Entities {
+			if e.Type == nemgen.EntityType_ENTITY_TYPE_STANDALONE {
+				entities = append(entities, e.Identifier)
+			}
+		}
 		return tosql.GenerateSQL(ctx, tosql.GenerateRequest{
 			ExecutionUUID:  uuid.Must(uuid.NewV4()).String(),
 			ProjectVersion: pv,
 			Configvalues: &tosql.ConfigValues{
 				DBType:   params.DBType,
-				Entities: []string{},
+				Entities: entities,
 				Actions: []tosql.Action{
 					tosql.CreateAction,
 				},
