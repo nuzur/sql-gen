@@ -258,7 +258,7 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 	case "decimal":
 		return nemgen.FieldType_FIELD_TYPE_DECIMAL, nil
 
-	case "varchar":
+	case "varchar", "character varying":
 		var max int64 = 255
 		if in.CharMax != nil {
 			max = *in.CharMax
@@ -302,7 +302,7 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 		return nemgen.FieldType_FIELD_TYPE_JSON, nil
 	case "date":
 		return nemgen.FieldType_FIELD_TYPE_DATE, nil
-	case "timestamp":
+	case "timestamp", "timestamp without time zone":
 		return nemgen.FieldType_FIELD_TYPE_DATETIME, nil
 	case "time":
 		return nemgen.FieldType_FIELD_TYPE_TIME, nil
