@@ -19,6 +19,5 @@ CREATE TABLE IF NOT EXISTS "{{$entity.Name}}" (
         FOREIGN KEY ({{$constraint.ForeignKeyFields}})
         REFERENCES "{{$constraint.TableName}}" ({{$constraint.ReferenceFields}})
         {{- if eq $constraint.HasComma true }},{{end -}}
-    {{- end}})
-
+    {{- end}});
 {{end -}}
