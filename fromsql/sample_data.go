@@ -11,6 +11,9 @@ func (rt *sqlremote) sampleTableValues(name string, key string) (remoteRows, err
 		as t2 ON t1.%s=t2.%s`, name, key, name, key, key)
 
 	rows, err := rt.sqlConnection.Queryx(query)
+	if err != nil {
+		return nil, fmt.Errorf("error getting sample data: %v | query:  %v", err, query)
+	}
 	data := []map[string]interface{}{}
 	for rows.Next() {
 		r := make(map[string]interface{})
@@ -19,9 +22,6 @@ func (rt *sqlremote) sampleTableValues(name string, key string) (remoteRows, err
 			return nil, err
 		}
 		data = append(data, r)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("error getting sample data: %v", err)
 	}
 	return data, nil
 }
