@@ -216,6 +216,8 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 	}
 	dataType := strings.ToLower(in.DataType)
 	switch dataType {
+	case "uuid":
+		return nemgen.FieldType_FIELD_TYPE_UUID, nil
 	case "char":
 		var max int64 = 0
 		if in.CharMax != nil {
@@ -231,25 +233,15 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 				MaxSize: max,
 			},
 		}
-	case "tinyint":
-		return nemgen.FieldType_FIELD_TYPE_INTEGER, &nemgen.FieldTypeConfig{
-			Integer: &nemgen.FieldTypeIntegerConfig{
-				Size: nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_EIGHT_BITS,
-			},
-		}
+	case "boolean":
+		return nemgen.FieldType_FIELD_TYPE_BOOLEAN, nil
 	case "smallint":
 		return nemgen.FieldType_FIELD_TYPE_INTEGER, &nemgen.FieldTypeConfig{
 			Integer: &nemgen.FieldTypeIntegerConfig{
 				Size: nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_SIXTEEN_BITS,
 			},
 		}
-	case "mediumint":
-		return nemgen.FieldType_FIELD_TYPE_INTEGER, &nemgen.FieldTypeConfig{
-			Integer: &nemgen.FieldTypeIntegerConfig{
-				Size: nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_TWENTY_FOUR_BITS,
-			},
-		}
-	case "int":
+	case "integer":
 		return nemgen.FieldType_FIELD_TYPE_INTEGER, &nemgen.FieldTypeConfig{
 			Integer: &nemgen.FieldTypeIntegerConfig{
 				Size: nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_THIRTY_TWO_BITS,
@@ -283,16 +275,6 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 				MaxSize: max,
 			},
 		}
-	case "tinytext":
-		var max int64 = 255
-		if in.CharMax != nil {
-			max = *in.CharMax
-		}
-		return nemgen.FieldType_FIELD_TYPE_TEXT, &nemgen.FieldTypeConfig{
-			Text: &nemgen.FieldTypeTextConfig{
-				MaxSize: max,
-			},
-		}
 	case "text":
 		var max int64 = 65535
 		if in.CharMax != nil {
@@ -303,59 +285,8 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 				MaxSize: max,
 			},
 		}
-	case "mediumtext":
-		var max int64 = 16777215
-		if in.CharMax != nil {
-			max = *in.CharMax
-		}
-		return nemgen.FieldType_FIELD_TYPE_TEXT, &nemgen.FieldTypeConfig{
-			Text: &nemgen.FieldTypeTextConfig{
-				MaxSize: max,
-			},
-		}
-	case "longtext":
-		var max int64 = 4294967295
-		if in.CharMax != nil {
-			max = *in.CharMax
-		}
-		return nemgen.FieldType_FIELD_TYPE_TEXT, &nemgen.FieldTypeConfig{
-			Text: &nemgen.FieldTypeTextConfig{
-				MaxSize: max,
-			},
-		}
-
-	case "tinyblob":
-		var max int64 = 255
-		if in.CharMax != nil {
-			max = *in.CharMax
-		}
-		return nemgen.FieldType_FIELD_TYPE_FILE, &nemgen.FieldTypeConfig{
-			File: &nemgen.FieldTypeFileConfig{
-				MaxSize: max,
-			},
-		}
-	case "blob":
+	case "bytea":
 		var max int64 = 65535
-		if in.CharMax != nil {
-			max = *in.CharMax
-		}
-		return nemgen.FieldType_FIELD_TYPE_FILE, &nemgen.FieldTypeConfig{
-			File: &nemgen.FieldTypeFileConfig{
-				MaxSize: max,
-			},
-		}
-	case "mediumblob":
-		var max int64 = 16777215
-		if in.CharMax != nil {
-			max = *in.CharMax
-		}
-		return nemgen.FieldType_FIELD_TYPE_FILE, &nemgen.FieldTypeConfig{
-			File: &nemgen.FieldTypeFileConfig{
-				MaxSize: max,
-			},
-		}
-	case "longblob":
-		var max int64 = 4294967295
 		if in.CharMax != nil {
 			max = *in.CharMax
 		}
@@ -371,7 +302,7 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 		return nemgen.FieldType_FIELD_TYPE_JSON, nil
 	case "date":
 		return nemgen.FieldType_FIELD_TYPE_DATE, nil
-	case "datetime":
+	case "timestamp":
 		return nemgen.FieldType_FIELD_TYPE_DATETIME, nil
 	case "time":
 		return nemgen.FieldType_FIELD_TYPE_TIME, nil
