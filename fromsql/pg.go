@@ -11,12 +11,12 @@ import (
 )
 
 type pgColumnDetails struct {
-	Name             string  `db:"COLUMN_NAME"`
-	DataType         string  `db:"DATA_TYPE"` // just the type
-	DefaultValue     *string `db:"COLUMN_DEFAULT"`
-	IsNullable       string  `db:"IS_NULLABLE"`
-	CharMax          *int64  `db:"CHARACTER_MAXIMUM_LENGTH"`
-	NumericPrecision *int64  `db:"NUMERIC_PRECISION"`
+	Name             string  `db:"column_name"`
+	DataType         string  `db:"data_type"`
+	DefaultValue     *string `db:"column_default"`
+	IsNullable       string  `db:"is_nullable"`
+	CharMax          *int64  `db:"character_maximum_length"`
+	NumericPrecision *int64  `db:"numeric_precision"`
 }
 
 type pgIndexDetails struct {
