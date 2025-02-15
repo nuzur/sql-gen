@@ -106,14 +106,7 @@ func (rt *sqlremote) buildFieldsFromMysql(tableName string) ([]*nemgen.Field, er
 		return nil, fmt.Errorf("error getting columns: %v", err)
 	}
 
-	keyColumn := ""
-	for _, cd := range columnsDetails {
-		if cd.ColumnKey == "PRI" {
-			keyColumn = cd.Name
-		}
-	}
-
-	sampleData, err := rt.sampleTableValues(tableName, keyColumn)
+	sampleData, err := rt.sampleTableValues(tableName)
 	if err != nil {
 		return nil, err
 	}
