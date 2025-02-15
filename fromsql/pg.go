@@ -101,7 +101,14 @@ func (rt *sqlremote) buildFieldsFromPg(tableName string, indexDetails []*pgIndex
 		tableName,
 	)
 
-	sampleData, err := rt.sampleTableValues(tableName)
+	keyColumn := ""
+	for _, id := range indexDetails {
+		if id.IsKey {
+			keyColumn = id.ColumnName
+		}
+	}
+
+	sampleData, err := rt.sampleTableValues(tableName, keyColumn)
 	if err != nil {
 		return nil, err
 	}

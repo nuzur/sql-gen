@@ -4,11 +4,11 @@ import (
 	"fmt"
 )
 
-func (rt *sqlremote) sampleTableValues(name string) (remoteRows, error) {
+func (rt *sqlremote) sampleTableValues(name string, key string) (remoteRows, error) {
 	// Get Data
 	query := fmt.Sprintf(`SELECT * FROM %s AS t1 JOIN 
-		(SELECT id FROM %s ORDER BY RAND() LIMIT 10) 
-		as t2 ON t1.id=t2.id`, name, name)
+		(SELECT %s FROM %s ORDER BY RAND() LIMIT 10) 
+		as t2 ON t1.%s=t2.%s`, name, key, name, key, key)
 
 	rows, err := rt.sqlConnection.Queryx(query)
 	data := []map[string]interface{}{}
