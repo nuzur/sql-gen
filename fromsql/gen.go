@@ -15,6 +15,8 @@ func GenerateProjectVersion(ctx context.Context, params GenerateRequest) (*nemge
 
 	if params.DBType == db.MYSQLDBType {
 		return rt.buildProjectVersionFromMysql()
+	} else if params.DBType == db.PGDBType {
+		return rt.buildProjectVersionFromPg()
 	}
 
 	return nil, errors.New("unsupported database type")
