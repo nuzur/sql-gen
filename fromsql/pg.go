@@ -92,7 +92,7 @@ func (rt *sqlremote) buildFieldsFromPg(tableName string, indexDetails []*pgIndex
 				column_default,
 				is_nullable,
 				character_maximum_length,
-				numeric_precision,
+				numeric_precision
 				FROM information_schema.columns
 				WHERE table_schema = '%s' 
 				AND table_name = '%s'
