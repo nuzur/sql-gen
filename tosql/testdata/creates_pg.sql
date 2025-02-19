@@ -38,3 +38,13 @@ CREATE TABLE IF NOT EXISTS "post" (
 );
 CREATE INDEX "nuevo_indice" ON "post" ("slug");
 
+CREATE TABLE IF NOT EXISTS "folder" (
+    "uuid" UUID NOT NULL,
+    "version" INTEGER NOT NULL,
+    "status" INTEGER NOT NULL,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_by" UUID NOT NULL,
+    "updated_by" UUID NOT NULL
+);
+

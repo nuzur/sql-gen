@@ -25,11 +25,13 @@ func TestGenPG(t *testing.T) {
 			Entities: []string{
 				"b8629dd5-f6e5-483f-893a-842357e171fc",
 				"6f9ca9c7-6af3-4301-82d2-739ec84eab83",
+				"de4f4b45-79b5-4f6b-9a2e-2d2d3a660aae",
 			},
 			Actions: []Action{
 				CreateAction,
 				DeleteAction,
 				InsertAction,
+				UpdateAction,
 				DeleteAction,
 				SelectSimpleAction,
 				SelectForIndexedSimpleAction,

@@ -38,3 +38,13 @@ CREATE TABLE IF NOT EXISTS `post` (
         REFERENCES `user` (`uuid`))
 ENGINE = InnoDB;
 
+CREATE TABLE IF NOT EXISTS `folder` (
+    `uuid` CHAR(36) NOT NULL,
+    `version` INT NOT NULL,
+    `status` INT NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `created_by` CHAR(36) NOT NULL,
+    `updated_by` CHAR(36) NOT NULL)
+ENGINE = InnoDB;
+

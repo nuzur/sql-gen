@@ -3647,29 +3647,7 @@
                         }
                     },
                     "indexes": [
-                        {
-                            "uuid": "b879ac96-b344-407d-9106-21e4e4c0ad76",
-                            "identifier": "pk_uuid",
-                            "type": 2,
-                            "fields": [
-                                {
-                                    "field_uuid": "713c34d6-4b51-4830-85d8-dfa54ff051f7",
-                                    "priority": 1,
-                                    "order": 1
-                                }
-                            ],
-                            "status": 1,
-                            "created_at": {
-                                "seconds": 1728325374,
-                                "nanos": 116000000
-                            },
-                            "updated_at": {
-                                "seconds": 1728325374,
-                                "nanos": 116000000
-                            },
-                            "created_by_uuid": "00000000-0000-0000-0000-000000000000",
-                            "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
-                        }
+                        
                     ]
                 },
                 "dependent": {}

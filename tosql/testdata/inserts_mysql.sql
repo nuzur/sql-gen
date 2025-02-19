@@ -10,3 +10,9 @@ INSERT INTO `post`
 VALUES
 (?,?,?,?,?,?,?,?,?,?,?,?,?);
 
+-- name: InsertFolder :execresult
+INSERT INTO `folder`
+(`uuid`,`version`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`)
+VALUES
+(?,?,?,?,?,?,?);
+

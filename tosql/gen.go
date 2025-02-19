@@ -8,6 +8,7 @@ import (
 	"path"
 	"slices"
 	"sync"
+	"text/template"
 
 	"github.com/iancoleman/strcase"
 	"github.com/nuzur/filetools"
@@ -125,6 +126,11 @@ func GenerateFile(ctx context.Context, req *GenerateFileRequest) error {
 		TemplateBytes:   tmplBytes,
 		Data:            req.Data,
 		DisableGoFormat: true,
+		Funcs: template.FuncMap{
+			"inc": func(i int) int {
+				return i + 1
+			},
+		},
 	})
 	if err != nil {
 		return err

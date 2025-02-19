@@ -8,3 +8,8 @@ DELETE FROM `post`
 WHERE
 `uuid` = ?;
 
+-- name: DeleteFolder :execresult
+DELETE FROM `folder`
+WHERE
+`uuid` = ?;
+

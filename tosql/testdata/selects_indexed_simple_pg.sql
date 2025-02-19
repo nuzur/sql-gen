@@ -91,3 +91,22 @@ FOR UPDATE;
         
 
 
+
+
+-- folder selects:
+-- name: FetchFolderByUuid :many
+SELECT "uuid","version","status","created_at","updated_at","created_by","updated_by"
+FROM "folder"
+WHERE 
+    "uuid" = ? ;
+
+        
+-- name: FetchFolderByUuidForUpdate :many
+SELECT "uuid","version","status","created_at","updated_at","created_by","updated_by"
+FROM "folder"
+WHERE 
+    "uuid" = ? 
+FOR UPDATE;
+        
+
+

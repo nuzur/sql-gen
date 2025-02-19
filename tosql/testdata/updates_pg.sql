@@ -12,3 +12,10 @@ SET
 WHERE
 "uuid" = ?;
 
+-- name: UpdateFolder :exec
+UPDATE "folder"
+SET
+"version" = ?, "status" = ?, "created_at" = ?, "updated_at" = ?, "created_by" = ?, "updated_by" = ?
+WHERE
+"uuid" = ?;
+

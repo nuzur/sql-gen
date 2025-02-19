@@ -1,8 +1,20 @@
 {{ range $entity := .Entities -}}
+{{- $hasIndexOrConstraint := (ne (len $entity.Constraints) 0) -}}
+{{- if eq $hasIndexOrConstraint false -}}
+    {{- range $index := $entity.Indexes -}}
+        {{- if eq $index.Type "primary" -}}
+            {{- $hasIndexOrConstraint = true -}}
+        {{- else if eq $index.Type "unique" -}}
+            {{- $hasIndexOrConstraint = true -}}
+        {{- end -}}
+    {{- end -}}
+{{- end -}}
+{{- $numFields := len $entity.Fields -}}
+{{- $fieldCounter := 0 -}}
 CREATE TABLE IF NOT EXISTS "{{$entity.Name}}" (
     {{- /* fields */ -}}
-    {{- range $field := $entity.Fields}}
-    "{{- $field.Name }}" {{ $field.Type }}{{- if ne $field.Postfix "" }} {{ $field.Postfix }}{{end -}},{{- end}}
+    {{- range $field := $entity.Fields}}{{ $fieldCounter = (inc $fieldCounter) }}
+    "{{- $field.Name }}" {{ $field.Type }}{{- if ne $field.Postfix "" }} {{ $field.Postfix }}{{end -}}{{- if or ($hasIndexOrConstraint) (ne $fieldCounter $numFields) -}},{{- end -}}{{- end}}
     {{- /* indexes */ -}}
     {{- range $index := $entity.Indexes }}
         {{- if eq $index.Type "primary"}}
