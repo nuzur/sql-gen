@@ -29,6 +29,13 @@ type mysqlIndexDetails struct {
 	ColumnName string `db:"COLUMN_NAME"`
 }
 
+type mysqlForeignKeyDetails struct {
+	ConstraintName       string `db:"CONSTRAINT_NAME"`
+	ColumnName           string `db:"COLUMN_NAME"`
+	ReferencedColumnName string `db:"REFERENCED_COLUMN_NAME"`
+	ReferencedTableName  string `db:"REFERENCED_TABLE_NAME"`
+}
+
 func (rt *sqlremote) buildProjectVersionFromMysql() (*nemgen.ProjectVersion, error) {
 	tableNames, err := rt.getTableNames()
 	if err != nil {
@@ -44,13 +51,57 @@ func (rt *sqlremote) buildProjectVersionFromMysql() (*nemgen.ProjectVersion, err
 		entities = append(entities, e)
 	}
 
+	relationships := []*nemgen.Relationship{}
+	for _, e := range entities {
+		rels, err := rt.buildRelationshipsFromMysql(e.Identifier, entities)
+		if err != nil {
+			return nil, err
+		}
+		relationships = append(relationships, rels...)
+	}
+
 	return &nemgen.ProjectVersion{
 		Uuid:          uuid.Must(uuid.NewV4()).String(),
 		Version:       time.Now().Unix(),
 		Entities:      entities,
 		Status:        nemgen.ProjectVersionStatus_PROJECT_VERSION_STATUS_ACTIVE,
-		Relationships: []*nemgen.Relationship{}, // todo build relationships
+		Relationships: relationships,
 	}, nil
+}
+
+func (rt *sqlremote) buildRelationshipsFromMysql(tableName string, entities []*nemgen.Entity) ([]*nemgen.Relationship, error) {
+	foreignKeysQuery := fmt.Sprintf(`
+		SELECT 
+			tc.CONSTRAINT_NAME, 
+			kcu.COLUMN_NAME, 
+			kcu.REFERENCED_COLUMN_NAME, 
+			kcu.REFERENCED_TABLE_NAME
+		FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+		JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu ON (
+			tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME AND
+			tc.TABLE_NAME = kcu.TABLE_NAME AND
+			tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA)
+		WHERE 
+			tc.CONSTRAINT_TYPE='FOREIGN KEY' AND
+			tc.TABLE_NAME = '%s' AND
+			tc.TABLE_SCHEMA = '%s'
+		ORDER BY ORDINAL_POSITION`,
+		rt.userConnection.DbSchema,
+		tableName,
+	)
+
+	var fkDetails []*mysqlForeignKeyDetails = []*mysqlForeignKeyDetails{}
+	err := rt.sqlConnection.Select(&fkDetails, foreignKeysQuery)
+	if err != nil {
+		return nil, fmt.Errorf("error getting constraint details: %v", err)
+	}
+
+	rels := []*nemgen.Relationship{}
+	for _, fkd := range fkDetails {
+		rels = append(rels, mapMysqlFKDetailsToRelationship(fkd, tableName, entities))
+	}
+
+	return rels, nil
 }
 
 func (rt *sqlremote) buildEntityFromMysql(tableName string) (*nemgen.Entity, error) {
@@ -83,19 +134,19 @@ func (rt *sqlremote) buildEntityFromMysql(tableName string) (*nemgen.Entity, err
 
 func (rt *sqlremote) buildFieldsFromMysql(tableName string) ([]*nemgen.Field, error) {
 	columnsQuery := fmt.Sprintf(`
-		select column_name,
-			   	data_type,
-				column_type,
-				column_key,
-			   	column_default,			    
-				is_nullable,
-				character_maximum_length,
-				numeric_precision 
-		from INFORMATION_SCHEMA.columns
-		where table_schema = '%s'
-		and table_name = '%s'
-		order by ordinal_position
-	`,
+		SELECT COLUMN_NAME,
+			   	DATA_TYPE,
+				COLUMN_TYPE,
+				COLUMN_KEY,
+			   	COLUMN_DEFAULT,			    
+				IS_NULLABLE,
+				CHARACTER_MAXIMUM_LENGTH,
+				NUMERIC_PRECISION 
+		FROM INFORMATION_SCHEMA.columns
+		WHERE 
+			TABLE_SCHEMA = '%s'
+			AND TABLE_NAME = '%s'
+		ORDER BY ORDINAL_POSITION`,
 		rt.userConnection.DbSchema,
 		tableName,
 	)
@@ -123,15 +174,15 @@ func (rt *sqlremote) buildFieldsFromMysql(tableName string) ([]*nemgen.Field, er
 
 func (rt *sqlremote) buildIndexesFromMysql(tableName string, fields []*nemgen.Field) ([]*nemgen.Index, error) {
 	indexesQuery := fmt.Sprintf(`
-			SELECT DISTINCT
-			index_name,
-			seq_in_index,
-			non_unique,
-			column_name
+		SELECT DISTINCT
+			INDEX_NAME,
+			SEQ_IN_INDEX,
+			NON_UNIQUE,
+			COLUMN_NAME
 		FROM INFORMATION_SCHEMA.STATISTICS
-		WHERE TABLE_SCHEMA = '%s'
-		and table_name = '%s';
-			`,
+		WHERE 
+			TABLE_SCHEMA = '%s'
+			AND table_name = '%s'`,
 		rt.userConnection.DbSchema,
 		tableName)
 
@@ -407,4 +458,65 @@ func mapMysqlIndexDetailsToIndex(in []*mysqlIndexDetails, fields []*nemgen.Field
 		Type:       indexType,
 		Fields:     finalIndexFields,
 	}
+}
+
+func mapMysqlFKDetailsToRelationship(in *mysqlForeignKeyDetails, tableName string, entities []*nemgen.Entity) *nemgen.Relationship {
+	if in == nil {
+		return nil
+	}
+
+	var fromEntity *nemgen.Entity
+	var toEntity *nemgen.Entity
+	for _, e := range entities {
+		if e.Identifier == tableName {
+			fromEntity = e
+		}
+		if e.Identifier == in.ReferencedTableName {
+			toEntity = e
+		}
+	}
+
+	var fromField *nemgen.Field
+	for _, f := range fromEntity.Fields {
+		if f.Identifier == in.ColumnName {
+			fromField = f
+			break
+		}
+	}
+
+	var toField *nemgen.Field
+	for _, f := range toEntity.Fields {
+		if f.Identifier == in.ColumnName {
+			toField = f
+			break
+		}
+	}
+
+	return &nemgen.Relationship{
+		Uuid:       uuid.Must(uuid.NewV4()).String(),
+		Version:    time.Now().Unix(),
+		Identifier: in.ConstraintName,
+		From: &nemgen.RelationshipNode{
+			Uuid: uuid.Must(uuid.NewV4()).String(),
+			Type: nemgen.RelationshipNodeType_RELATIONSHIP_NODE_TYPE_ENTITY,
+			TypeConfig: &nemgen.RelationshipNodeTypeConfig{
+				Entity: &nemgen.RelationshipNodeTypeEntityConfig{
+					EntityUuid: fromEntity.Uuid,
+					FieldUuids: []string{fromField.Uuid},
+				},
+			},
+		},
+		To: &nemgen.RelationshipNode{
+			Uuid: uuid.Must(uuid.NewV4()).String(),
+			Type: nemgen.RelationshipNodeType_RELATIONSHIP_NODE_TYPE_ENTITY,
+			TypeConfig: &nemgen.RelationshipNodeTypeConfig{
+				Entity: &nemgen.RelationshipNodeTypeEntityConfig{
+					EntityUuid: toEntity.Uuid,
+					FieldUuids: []string{toField.Uuid},
+				},
+			},
+		},
+		Status: nemgen.RelationshipStatus_RELATIONSHIP_STATUS_ACTIVE,
+	}
+
 }
