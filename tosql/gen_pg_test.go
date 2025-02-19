@@ -23,7 +23,8 @@ func TestGenPG(t *testing.T) {
 		Configvalues: &ConfigValues{
 			DBType: db.PGDBType,
 			Entities: []string{
-				"b8629dd5-f6e5-483f-893a-842357e171fc", "6f9ca9c7-6af3-4301-82d2-739ec84eab83",
+				"b8629dd5-f6e5-483f-893a-842357e171fc",
+				"6f9ca9c7-6af3-4301-82d2-739ec84eab83",
 			},
 			Actions: []Action{
 				CreateAction,
