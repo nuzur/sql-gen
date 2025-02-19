@@ -84,7 +84,7 @@ func (rt *sqlremote) buildRelationshipsFromMysql(tableName string, entities []*n
 		WHERE 
 			tc.CONSTRAINT_TYPE='FOREIGN KEY' AND
 			tc.TABLE_NAME = '%s' AND
-			tc.TABLE_SCHEMA = '%s'
+			tc.TABLE_SCHEMA = '%s' 
 		ORDER BY ORDINAL_POSITION`,
 		rt.userConnection.DbSchema,
 		tableName,
