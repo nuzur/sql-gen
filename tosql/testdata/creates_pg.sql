@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS "user" (
     "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "created_by" UUID NOT NULL,
     "updated_by" UUID NOT NULL,
-    PRIMARY KEY ("uuid"),
+    PRIMARY KEY ("uuid", "version"),
     UNIQUE ("uuid"),
     UNIQUE ("email")
 );

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `user` (
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `created_by` CHAR(36) NOT NULL,
     `updated_by` CHAR(36) NOT NULL,
-    PRIMARY KEY (`uuid`),
+    PRIMARY KEY (`uuid`, `version`),
     INDEX `index_email` (`email` ASC),
     INDEX `index_status` (`status` ASC),
     INDEX `index_updated_at` (`updated_at` ASC),

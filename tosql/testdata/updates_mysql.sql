@@ -1,21 +1,21 @@
 -- name: UpdateUser :exec
 UPDATE `user`
 SET
-`version` = ?, `email` = ?, `password` = ?, `status` = ?, `created_at` = ?, `updated_at` = ?, `created_by` = ?, `updated_by` = ?
+`uuid` = ?, `version` = ?, `email` = ?, `password` = ?, `status` = ?, `created_at` = ?, `updated_at` = ?, `created_by` = ?, `updated_by` = ?
 WHERE
-`uuid` = ?;
+`uuid` = ? AND `version` = ?;
 
 -- name: UpdatePost :exec
 UPDATE `post`
 SET
-`version` = ?, `title` = ?, `slug` = ?, `description` = ?, `content` = ?, `status` = ?, `created_at` = ?, `updated_at` = ?, `created_by` = ?, `updated_by` = ?, `media` = ?, `user_uuid` = ?
+`uuid` = ?, `version` = ?, `title` = ?, `slug` = ?, `description` = ?, `content` = ?, `status` = ?, `created_at` = ?, `updated_at` = ?, `created_by` = ?, `updated_by` = ?, `media` = ?, `user_uuid` = ?
 WHERE
 `uuid` = ?;
 
 -- name: UpdateFolder :exec
 UPDATE `folder`
 SET
-`version` = ?, `status` = ?, `created_at` = ?, `updated_at` = ?, `created_by` = ?, `updated_by` = ?
+`uuid` = ?, `version` = ?, `status` = ?, `created_at` = ?, `updated_at` = ?, `created_by` = ?, `updated_by` = ?
 WHERE
 `uuid` = ?;
 

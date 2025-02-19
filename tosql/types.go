@@ -37,11 +37,7 @@ func (e SchemaEntity) PrimaryKeysIdentifiers() string {
 func (e SchemaEntity) PrimaryKeysWhereClause() string {
 	keys := []string{}
 	for _, pk := range e.PrimaryKeys {
-		if e.DBType == db.MYSQLDBType {
-			keys = append(keys, fmt.Sprintf("`%s` = ?", pk))
-		} else if e.DBType == db.PGDBType {
-			keys = append(keys, fmt.Sprintf(`"%s" = ?`, pk))
-		}
+		keys = append(keys, fmt.Sprintf("%s = ?", pk))
 	}
 	return strings.Join(keys, " AND ")
 }

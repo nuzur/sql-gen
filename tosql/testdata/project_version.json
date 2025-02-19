@@ -166,6 +166,7 @@
                         "slug": {}
                     },
                     "required": true,
+                    "key": true,
                     "status": 1,
                     "created_at": {
                         "seconds": 1726954542,
@@ -807,13 +808,18 @@
                         },
                         {
                             "uuid": "94ce553c-e3f4-408f-b8db-ceaace361949",
-                            "identifier": "pk_uuid",
+                            "identifier": "pk_uuid_version",
                             "type": 2,
                             "fields": [
                                 {
                                     "field_uuid": "c574a76b-8ddc-4a04-81f0-0493dfe2c396",
                                     "priority": 1,
                                     "order": 1
+                                },
+                                {
+                                    "field_uuid":"243d41f7-9e81-411d-90fc-2cba16ef8a21",
+                                    "priority": 2,
+                                    "order": 2
                                 }
                             ],
                             "status": 1,

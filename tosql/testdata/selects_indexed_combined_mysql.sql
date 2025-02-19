@@ -1,11 +1,11 @@
 
 
 -- user selects: 
--- name: FetchUserByUuid :many
+-- name: FetchUserByUuidAndVersion :many
 SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`
 FROM `user`
 WHERE 
-    `uuid` = ? ;
+    `uuid` = ? AND `version` = ? ;
         
      
 -- name: FetchUserByEmail :many
@@ -29,11 +29,11 @@ WHERE
     `email` = ? AND `status` = ? 
 LIMIT ?, ?;        
     
--- name: FetchUserByUuidForUpdate :many
+-- name: FetchUserByUuidAndVersionForUpdate :many
 SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`
 FROM `user`
 WHERE 
-    `uuid` = ? 
+    `uuid` = ? AND `version` = ? 
 FOR UPDATE;
         
 -- name: FetchUserByEmailOrderedByUpdatedAtASC :many

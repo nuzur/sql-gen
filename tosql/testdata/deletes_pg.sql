@@ -1,7 +1,7 @@
 -- name: DeleteUser :execresult
 DELETE FROM "user"
 WHERE
-"uuid" = ?;
+"uuid" = ? AND "version" = ?;
 
 -- name: DeletePost :execresult
 DELETE FROM "post"

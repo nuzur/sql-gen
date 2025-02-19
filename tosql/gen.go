@@ -13,6 +13,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/nuzur/filetools"
 	nemgen "github.com/nuzur/nem/idl/gen"
+	"github.com/nuzur/sql-gen/db"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -53,7 +54,11 @@ func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, e
 			primaryKeys := EntityPrimaryKeys(e)
 			primaryKeysIdentifiers := []string{}
 			for _, pk := range primaryKeys {
-				primaryKeysIdentifiers = append(primaryKeysIdentifiers, pk.Identifier)
+				if req.Configvalues.DBType == db.MYSQLDBType {
+					primaryKeysIdentifiers = append(primaryKeysIdentifiers, fmt.Sprintf("`%s`", pk.Identifier))
+				} else if req.Configvalues.DBType == db.PGDBType {
+					primaryKeysIdentifiers = append(primaryKeysIdentifiers, fmt.Sprintf("\"%s\"", pk.Identifier))
+				}
 			}
 			entityTemplate := SchemaEntity{
 				DBType:           req.Configvalues.DBType,

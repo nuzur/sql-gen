@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS "{{$entity.Name}}" (
     {{- /* indexes */ -}}
     {{- range $index := $entity.Indexes }}
         {{- if eq $index.Type "primary"}}
-    PRIMARY KEY ("{{$entity.PrimaryKeysIdentifiers}}")
+    PRIMARY KEY ({{$entity.PrimaryKeysIdentifiers}})
             {{- if eq $index.HasComma true }},{{end -}}
         {{- else if eq $index.Type "unique"}}
     UNIQUE {{$index.FieldNamesIdentifiers}}

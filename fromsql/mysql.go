@@ -23,10 +23,11 @@ type mysqlColumnDetails struct {
 }
 
 type mysqlIndexDetails struct {
-	Name       string `db:"INDEX_NAME"`
-	Seq        int64  `db:"SEQ_IN_INDEX"`
-	NonUnique  bool   `db:"NON_UNIQUE"`
-	ColumnName string `db:"COLUMN_NAME"`
+	Name           string `db:"INDEX_NAME"`
+	Seq            int64  `db:"SEQ_IN_INDEX"`
+	NonUnique      bool   `db:"NON_UNIQUE"`
+	ColumnName     string `db:"COLUMN_NAME"`
+	ConstraintType string `db:"CONSTRAINT_TYPE"`
 }
 
 type mysqlForeignKeyDetails struct {
@@ -175,14 +176,20 @@ func (rt *sqlremote) buildFieldsFromMysql(tableName string) ([]*nemgen.Field, er
 func (rt *sqlremote) buildIndexesFromMysql(tableName string, fields []*nemgen.Field) ([]*nemgen.Index, error) {
 	indexesQuery := fmt.Sprintf(`
 		SELECT DISTINCT
-			INDEX_NAME,
-			SEQ_IN_INDEX,
-			NON_UNIQUE,
-			COLUMN_NAME
-		FROM INFORMATION_SCHEMA.STATISTICS
-		WHERE 
-			TABLE_SCHEMA = '%s'
-			AND table_name = '%s'`,
+			s.INDEX_NAME,
+			s.SEQ_IN_INDEX,
+			s.NON_UNIQUE,
+			s.COLUMN_NAME,
+			IFNULL(t.CONSTRAINT_TYPE, "INDEX") as CONSTRAINT_TYPE
+		FROM
+			INFORMATION_SCHEMA.STATISTICS s
+				LEFT OUTER JOIN
+			INFORMATION_SCHEMA.TABLE_CONSTRAINTS t ON t.TABLE_SCHEMA = s.TABLE_SCHEMA
+				AND t.TABLE_NAME = s.TABLE_NAME
+				AND s.INDEX_NAME = t.CONSTRAINT_NAME
+		WHERE
+			0 = 0 AND s.TABLE_SCHEMA = '%s'
+				AND s.table_name = '%s'`,
 		rt.userConnection.DbSchema,
 		tableName)
 
@@ -427,18 +434,17 @@ func mapMysqlIndexDetailsToIndex(in []*mysqlIndexDetails, fields []*nemgen.Field
 		columns = append(columns, id.ColumnName)
 	}
 
-	indexFields := make(map[string]*nemgen.Field)
 	indexType := nemgen.IndexType_INDEX_TYPE_INDEX
+	if first.ConstraintType == "PRIMARY KEY" {
+		indexType = nemgen.IndexType_INDEX_TYPE_PRIMARY
+	} else if first.ConstraintType == "UNIQUE" {
+		indexType = nemgen.IndexType_INDEX_TYPE_UNIQUE
+	}
+
+	indexFields := make(map[string]*nemgen.Field)
 	for _, f := range fields {
 		if slices.Contains(columns, f.Identifier) {
 			indexFields[f.Identifier] = f
-			if f.Key {
-				indexType = nemgen.IndexType_INDEX_TYPE_PRIMARY
-			}
-
-			if f.Unique {
-				indexType = nemgen.IndexType_INDEX_TYPE_UNIQUE
-			}
 		}
 	}
 
