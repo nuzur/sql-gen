@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS "user" (
     "updated_by" UUID NOT NULL,
     PRIMARY KEY ("uuid"),
     UNIQUE ("uuid"),
-    UNIQUE ("email"));
+    UNIQUE ("email")
+);
 
 CREATE INDEX "index_email" ON "user" ("email");
 CREATE INDEX "index_status" ON "user" ("status");
@@ -34,6 +35,7 @@ CREATE TABLE IF NOT EXISTS "post" (
     UNIQUE ("slug"),
     CONSTRAINT "post_user"
         FOREIGN KEY ("user_uuid")
-        REFERENCES "user" ("uuid"));
+        REFERENCES "user" ("uuid")
+);
 
 CREATE INDEX "nuevo_indice" ON "post" ("slug");
