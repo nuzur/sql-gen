@@ -1,4 +1,4 @@
-{{- range $entity := .Entities -}}
+{{ range $entity := .Entities -}}
 CREATE TABLE IF NOT EXISTS "{{$entity.Name}}" (
     {{- /* fields */ -}}
     {{- range $field := $entity.Fields}}
@@ -22,9 +22,9 @@ CREATE TABLE IF NOT EXISTS "{{$entity.Name}}" (
     {{ end -}});
 
 {{- range $index := $entity.Indexes}}
-{{ if and (ne $index.Type "primary") (ne $index.Type "unique") -}}
-CREATE INDEX "{{$index.Name}}" ON "{{$entity.Name}}" {{$index.FieldNamesIdentifiers}};{{ end -}}
-{{ end -}}
-
+{{ if and (ne $index.Type "primary") (ne $index.Type "unique") -}} 
+CREATE INDEX "{{$index.Name}}" ON "{{$entity.Name}}" {{$index.FieldNamesIdentifiers}};
+{{- end}}{{- end}}
+{{- printf "\n" -}}
 {{end -}}
 

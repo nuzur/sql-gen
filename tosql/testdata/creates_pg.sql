@@ -16,6 +16,7 @@ CREATE INDEX "index_email" ON "user" ("email");
 CREATE INDEX "index_status" ON "user" ("status");
 CREATE INDEX "index_updated_at" ON "user" ("updated_at");
 
+
 CREATE TABLE IF NOT EXISTS "post" (
     "uuid" UUID NOT NULL,
     "version" INTEGER NOT NULL,
@@ -37,3 +38,4 @@ CREATE TABLE IF NOT EXISTS "post" (
         REFERENCES "user" ("uuid"));
 
 CREATE INDEX "nuevo_indice" ON "post" ("slug");
+
