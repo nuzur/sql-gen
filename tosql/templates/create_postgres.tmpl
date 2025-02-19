@@ -19,12 +19,13 @@ CREATE TABLE IF NOT EXISTS "{{$entity.Name}}" (
         FOREIGN KEY ({{$constraint.ForeignKeyFields}})
         REFERENCES "{{$constraint.TableName}}" ({{$constraint.ReferenceFields}})
         {{- if eq $constraint.HasComma true }},{{end -}}
-    {{ end -}}
-{{- printf "\n" -}}
+    {{- end }}
 );
 
 {{- range $index := $entity.Indexes}}
-{{ if and (ne $index.Type "primary") (ne $index.Type "unique") -}} 
-CREATE INDEX "{{$index.Name}}" ON "{{$entity.Name}}" {{$index.FieldNamesIdentifiers}};{{ end -}}{{ end -}}
-{{- printf "\n" -}}
+{{- if and (ne $index.Type "primary") (ne $index.Type "unique")}}
+CREATE INDEX "{{$index.Name}}" ON "{{$entity.Name}}" {{$index.FieldNamesIdentifiers}};
+{{- end -}}
+{{- end}}
+
 {{ end -}}
