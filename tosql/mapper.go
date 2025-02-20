@@ -193,14 +193,24 @@ func mapRelationships(e *nemgen.Entity, projectVersion *nemgen.ProjectVersion, d
 			if entityMap[toEntity.EntityUuid].Type == nemgen.EntityType_ENTITY_TYPE_STANDALONE &&
 				entityMap[fromEntity.EntityUuid].Type == nemgen.EntityType_ENTITY_TYPE_STANDALONE {
 				if fromEntity.EntityUuid == e.Uuid {
-					fieldUuids := relationship.To.TypeConfig.Entity.FieldUuids
-					fieldIdentifers := mapFieldIdentifiers(entityMap[toEntity.EntityUuid])
-					if len(fieldUuids) > 0 {
-						fields := []SchemaField{}
-						for _, fu := range fieldUuids {
-							fields = append(fields, SchemaField{
-								Name:      fieldIdentifers[fu],
-								NameTitle: strcase.ToCamel(fieldIdentifers[fu]),
+					toFieldUuids := relationship.To.TypeConfig.Entity.FieldUuids
+					fromFieldUuids := relationship.From.TypeConfig.Entity.FieldUuids
+					toFieldIdentifers := mapFieldIdentifiers(entityMap[toEntity.EntityUuid])
+					fromFieldIdentifers := mapFieldIdentifiers(entityMap[fromEntity.EntityUuid])
+					if len(toFieldUuids) > 0 {
+						toFields := []SchemaField{}
+						for _, fu := range toFieldUuids {
+							toFields = append(toFields, SchemaField{
+								Name:      toFieldIdentifers[fu],
+								NameTitle: strcase.ToCamel(toFieldIdentifers[fu]),
+							})
+						}
+
+						fromFields := []SchemaField{}
+						for _, fu := range fromFieldUuids {
+							fromFields = append(fromFields, SchemaField{
+								Name:      fromFieldIdentifers[fu],
+								NameTitle: strcase.ToCamel(fromFieldIdentifers[fu]),
 							})
 						}
 						res = append(res, SchemaConstraint{
@@ -208,7 +218,8 @@ func mapRelationships(e *nemgen.Entity, projectVersion *nemgen.ProjectVersion, d
 							Name:         relationship.Identifier,
 							Relationship: relationship,
 							TableName:    entityIdentifiers[toEntity.EntityUuid],
-							Fields:       fields,
+							ToFields:     toFields,
+							FromFields:   fromFields,
 						})
 					}
 				}

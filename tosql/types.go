@@ -148,20 +148,21 @@ type SchemaConstraint struct {
 	Name         string
 	Relationship *nemgen.Relationship
 	TableName    string
-	Fields       []SchemaField
+	FromFields   []SchemaField
+	ToFields     []SchemaField
 	HasComma     bool
 }
 
 func (sc SchemaConstraint) ForeignKeyFields() string {
-	sort.Slice(sc.Fields, func(i, j int) bool {
-		return strings.Compare(sc.Fields[i].Name, sc.Fields[j].Name) < 1
+	sort.Slice(sc.FromFields, func(i, j int) bool {
+		return strings.Compare(sc.FromFields[i].Name, sc.FromFields[j].Name) < 1
 	})
 	fields := []string{}
-	for _, f := range sc.Fields {
+	for _, f := range sc.FromFields {
 		if sc.DBType == db.MYSQLDBType {
-			fields = append(fields, fmt.Sprintf("`%s_%s`", sc.TableName, f.Name))
+			fields = append(fields, fmt.Sprintf("`%s`", f.Name))
 		} else if sc.DBType == db.PGDBType {
-			fields = append(fields, fmt.Sprintf(`"%s_%s"`, sc.TableName, f.Name))
+			fields = append(fields, fmt.Sprintf(`"%s"`, f.Name))
 		}
 	}
 
@@ -169,11 +170,11 @@ func (sc SchemaConstraint) ForeignKeyFields() string {
 }
 
 func (sc SchemaConstraint) ReferenceFields() string {
-	sort.Slice(sc.Fields, func(i, j int) bool {
-		return strings.Compare(sc.Fields[i].Name, sc.Fields[j].Name) < 1
+	sort.Slice(sc.ToFields, func(i, j int) bool {
+		return strings.Compare(sc.ToFields[i].Name, sc.ToFields[j].Name) < 1
 	})
 	fields := []string{}
-	for _, f := range sc.Fields {
+	for _, f := range sc.ToFields {
 		if sc.DBType == db.MYSQLDBType {
 			fields = append(fields, fmt.Sprintf("`%s`", f.Name))
 		} else if sc.DBType == db.PGDBType {
