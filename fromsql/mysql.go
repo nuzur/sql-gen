@@ -528,7 +528,8 @@ func mapMysqlFKDetailsToRelationship(in *mysqlForeignKeyDetails, tableName strin
 				},
 			},
 		},
-		Status: nemgen.RelationshipStatus_RELATIONSHIP_STATUS_ACTIVE,
+		Status:        nemgen.RelationshipStatus_RELATIONSHIP_STATUS_ACTIVE,
+		UseForeignKey: true,
 	}
 
 }

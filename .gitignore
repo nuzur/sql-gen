@@ -25,3 +25,5 @@ go.work.sum
 .env
 tosql/executions/*
 main.go
+executions/*
+
