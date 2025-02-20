@@ -1,3 +1,6 @@
+ENGINE = InnoDB;
+{{- print "\n" -}}
+{{- print "\n" -}}
 {{- range $entity := .Entities -}}
 {{- $hasIndexOrConstraint := false -}}
 {{- $hasIndexOrConstraint = or (ne (len $entity.Indexes) 0) (ne (len $entity.Constraints) 0) -}}
@@ -23,7 +26,7 @@ CREATE TABLE IF NOT EXISTS `{{$entity.Name}}` (
         FOREIGN KEY ({{$constraint.ForeignKeyFields}})
         REFERENCES `{{$constraint.TableName}}` ({{$constraint.ReferenceFields}})
         {{- if eq $constraint.HasComma true }},{{end -}}
-    {{- end}})
-ENGINE = InnoDB;
+    {{- end}}
+);
 
 {{end -}}

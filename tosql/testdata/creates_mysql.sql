@@ -1,3 +1,5 @@
+ENGINE = InnoDB;
+
 CREATE TABLE IF NOT EXISTS `user` (
     `uuid` CHAR(36) NOT NULL,
     `version` INT NOT NULL,
@@ -13,8 +15,8 @@ CREATE TABLE IF NOT EXISTS `user` (
     INDEX `index_status` (`status` ASC),
     INDEX `index_updated_at` (`updated_at` ASC),
     UNIQUE INDEX `unique_uuid` (`uuid` ASC),
-    UNIQUE INDEX `unique_email` (`email` ASC))
-ENGINE = InnoDB;
+    UNIQUE INDEX `unique_email` (`email` ASC)
+);
 
 CREATE TABLE IF NOT EXISTS `post` (
     `uuid` CHAR(36) NOT NULL,
@@ -35,8 +37,8 @@ CREATE TABLE IF NOT EXISTS `post` (
     UNIQUE INDEX `unique_slug` (`slug` ASC),
     CONSTRAINT `post_user`
         FOREIGN KEY (`user_uuid`)
-        REFERENCES `user` (`uuid`))
-ENGINE = InnoDB;
+        REFERENCES `user` (`uuid`)
+);
 
 CREATE TABLE IF NOT EXISTS `folder` (
     `uuid` CHAR(36) NOT NULL,
@@ -45,6 +47,6 @@ CREATE TABLE IF NOT EXISTS `folder` (
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `created_by` CHAR(36) NOT NULL,
-    `updated_by` CHAR(36) NOT NULL)
-ENGINE = InnoDB;
+    `updated_by` CHAR(36) NOT NULL
+);
 
