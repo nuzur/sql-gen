@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	nemgen "github.com/nuzur/nem/idl/gen"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/gofrs/uuid"
 )
@@ -43,22 +45,43 @@ func (rt *sqlremote) buildProjectVersionFromMysql() (*nemgen.ProjectVersion, err
 		return nil, err
 	}
 
+	eg := errgroup.Group{}
+	mu := &sync.Mutex{}
 	entities := []*nemgen.Entity{}
 	for _, tableName := range tableNames {
-		e, err := rt.buildEntityFromMysql(tableName)
-		if err != nil {
-			return nil, err
-		}
-		entities = append(entities, e)
+		eg.Go(func() error {
+			e, err := rt.buildEntityFromMysql(tableName)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			entities = append(entities, e)
+			mu.Unlock()
+			return nil
+		})
+	}
+	err = eg.Wait()
+	if err != nil {
+		return nil, err
 	}
 
+	eg = errgroup.Group{}
 	relationships := []*nemgen.Relationship{}
 	for _, e := range entities {
-		rels, err := rt.buildRelationshipsFromMysql(e.Identifier, entities)
-		if err != nil {
-			return nil, err
-		}
-		relationships = append(relationships, rels...)
+		eg.Go(func() error {
+			rels, err := rt.buildRelationshipsFromMysql(e.Identifier, entities)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			relationships = append(relationships, rels...)
+			mu.Unlock()
+			return nil
+		})
+	}
+	err = eg.Wait()
+	if err != nil {
+		return nil, err
 	}
 
 	return &nemgen.ProjectVersion{
