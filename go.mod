@@ -6,6 +6,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/iancoleman/strcase v0.3.0
+	github.com/lib/pq v1.10.9
 	github.com/nuzur/filetools v0.0.3
 	github.com/nuzur/nem v1.0.2
 	github.com/stretchr/testify v1.10.0

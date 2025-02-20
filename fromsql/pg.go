@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofrs/uuid"
 	nemgen "github.com/nuzur/nem/idl/gen"
+	"golang.org/x/sync/errgroup"
 )
 
 type pgColumnDetails struct {
@@ -28,19 +30,56 @@ type pgIndexDetails struct {
 	Ascending  bool   `db:"ascending"`
 }
 
+type pgForeignKeyDetails struct {
+	ConstraintName       string `db:"constraint_name"`
+	ColumnName           string `db:"column_name"`
+	ReferencedColumnName string `db:"referenced_column_name"`
+	ReferencedTableName  string `db:"referenced_table_name"`
+}
+
 func (rt *sqlremote) buildProjectVersionFromPg() (*nemgen.ProjectVersion, error) {
 	tableNames, err := rt.getTableNames()
 	if err != nil {
 		return nil, err
 	}
 
+	eg := errgroup.Group{}
+	mu := &sync.Mutex{}
 	entities := []*nemgen.Entity{}
 	for _, tableName := range tableNames {
-		e, err := rt.buildEntityFromPg(tableName)
-		if err != nil {
-			return nil, err
-		}
-		entities = append(entities, e)
+		eg.Go(func() error {
+			e, err := rt.buildEntityFromPg(tableName)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			entities = append(entities, e)
+			mu.Unlock()
+			return nil
+		})
+	}
+	err = eg.Wait()
+	if err != nil {
+		return nil, err
+	}
+
+	eg = errgroup.Group{}
+	relationships := []*nemgen.Relationship{}
+	for _, e := range entities {
+		eg.Go(func() error {
+			rels, err := rt.buildRelationshipsFromPg(e.Identifier, entities)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			relationships = append(relationships, rels...)
+			mu.Unlock()
+			return nil
+		})
+	}
+	err = eg.Wait()
+	if err != nil {
+		return nil, err
 	}
 
 	return &nemgen.ProjectVersion{
@@ -48,8 +87,43 @@ func (rt *sqlremote) buildProjectVersionFromPg() (*nemgen.ProjectVersion, error)
 		Version:       time.Now().Unix(),
 		Entities:      entities,
 		Status:        nemgen.ProjectVersionStatus_PROJECT_VERSION_STATUS_ACTIVE,
-		Relationships: []*nemgen.Relationship{}, // todo build relationships
+		Relationships: relationships,
 	}, nil
+}
+
+func (rt *sqlremote) buildRelationshipsFromPg(tableName string, entities []*nemgen.Entity) ([]*nemgen.Relationship, error) {
+	foreignKeysQuery := fmt.Sprintf(`
+		SELECT
+			tc.constraint_name, 
+			kcu.column_name, 
+			ccu.table_name AS referenced_table_name,
+			ccu.column_name AS referenced_column_name 
+		FROM information_schema.table_constraints AS tc 
+		JOIN information_schema.key_column_usage AS kcu
+			ON tc.constraint_name = kcu.constraint_name
+			AND tc.table_schema = kcu.table_schema
+		JOIN information_schema.constraint_column_usage AS ccu
+			ON ccu.constraint_name = tc.constraint_name
+		WHERE tc.constraint_type = 'FOREIGN KEY'
+			AND tc.table_schema='%s'
+			AND tc.table_name='%s'
+		ORDER BY ORDINAL_POSITION;`,
+		rt.userConnection.DbSchema,
+		tableName,
+	)
+
+	var fkDetails []*pgForeignKeyDetails = []*pgForeignKeyDetails{}
+	err := rt.sqlConnection.Select(&fkDetails, foreignKeysQuery)
+	if err != nil {
+		return nil, fmt.Errorf("error getting constraint details: %v", err)
+	}
+
+	rels := []*nemgen.Relationship{}
+	for _, fkd := range fkDetails {
+		rels = append(rels, mapPgFKDetailsToRelationship(fkd, tableName, entities))
+	}
+
+	return rels, nil
 }
 
 func (rt *sqlremote) buildEntityFromPg(tableName string) (*nemgen.Entity, error) {
@@ -363,4 +437,66 @@ func mapPgIndexDetailsToIndex(in []*pgIndexDetails, fields []*nemgen.Field) *nem
 		Type:       indexType,
 		Fields:     finalIndexFields,
 	}
+}
+
+func mapPgFKDetailsToRelationship(in *pgForeignKeyDetails, tableName string, entities []*nemgen.Entity) *nemgen.Relationship {
+	if in == nil {
+		return nil
+	}
+
+	var fromEntity *nemgen.Entity
+	var toEntity *nemgen.Entity
+	for _, e := range entities {
+		if e.Identifier == tableName {
+			fromEntity = e
+		}
+		if e.Identifier == in.ReferencedTableName {
+			toEntity = e
+		}
+	}
+
+	var fromField *nemgen.Field
+	for _, f := range fromEntity.Fields {
+		if f.Identifier == in.ColumnName {
+			fromField = f
+			break
+		}
+	}
+
+	var toField *nemgen.Field
+	for _, f := range toEntity.Fields {
+		if f.Identifier == in.ReferencedColumnName {
+			toField = f
+			break
+		}
+	}
+
+	return &nemgen.Relationship{
+		Uuid:       uuid.Must(uuid.NewV4()).String(),
+		Version:    time.Now().Unix(),
+		Identifier: in.ConstraintName,
+		From: &nemgen.RelationshipNode{
+			Uuid: uuid.Must(uuid.NewV4()).String(),
+			Type: nemgen.RelationshipNodeType_RELATIONSHIP_NODE_TYPE_ENTITY,
+			TypeConfig: &nemgen.RelationshipNodeTypeConfig{
+				Entity: &nemgen.RelationshipNodeTypeEntityConfig{
+					EntityUuid: fromEntity.Uuid,
+					FieldUuids: []string{fromField.Uuid},
+				},
+			},
+		},
+		To: &nemgen.RelationshipNode{
+			Uuid: uuid.Must(uuid.NewV4()).String(),
+			Type: nemgen.RelationshipNodeType_RELATIONSHIP_NODE_TYPE_ENTITY,
+			TypeConfig: &nemgen.RelationshipNodeTypeConfig{
+				Entity: &nemgen.RelationshipNodeTypeEntityConfig{
+					EntityUuid: toEntity.Uuid,
+					FieldUuids: []string{toField.Uuid},
+				},
+			},
+		},
+		Status:        nemgen.RelationshipStatus_RELATIONSHIP_STATUS_ACTIVE,
+		UseForeignKey: true,
+	}
+
 }
