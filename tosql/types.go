@@ -107,9 +107,17 @@ func (i SchemaIndex) FieldNamesIdentifiers() string {
 			} else if f.Order == nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_DESC {
 				order = "DESC"
 			}
-			fieldsStr = append(fieldsStr, fmt.Sprintf("`%s` %s", i.FieldNames[f.FieldUuid], order))
+			if f.Length > 0 {
+				fieldsStr = append(fieldsStr, fmt.Sprintf("`%s`(%d) %s", i.FieldNames[f.FieldUuid], f.Length, order))
+			} else {
+				fieldsStr = append(fieldsStr, fmt.Sprintf("`%s` %s", i.FieldNames[f.FieldUuid], order))
+			}
 		} else if i.DBType == db.PGDBType {
-			fieldsStr = append(fieldsStr, fmt.Sprintf(`"%s"`, i.FieldNames[f.FieldUuid]))
+			if f.Length > 0 {
+				fieldsStr = append(fieldsStr, fmt.Sprintf(`"%s"(%d)`, i.FieldNames[f.FieldUuid], f.Length))
+			} else {
+				fieldsStr = append(fieldsStr, fmt.Sprintf(`"%s"`, i.FieldNames[f.FieldUuid]))
+			}
 		}
 	}
 

@@ -367,7 +367,7 @@ func mapMysqlColumnDataTypeToFieldType(in *mysqlColumnDetails, sampleData remote
 				MaxSize: max,
 			},
 		}
-	case "blob":
+	case "blob", "binary":
 		var max int64 = 65535
 		if in.CharMax != nil {
 			max = *in.CharMax
@@ -450,10 +450,16 @@ func mapMysqlIndexDetailsToIndex(in []*mysqlIndexDetails, fields []*nemgen.Field
 
 	finalIndexFields := []*nemgen.IndexField{}
 	for _, id := range in {
+		length := int64(0)
+		// todo work more on this
+		if indexFields[id.ColumnName].Type == nemgen.FieldType_FIELD_TYPE_TEXT {
+			length = 255
+		}
 		finalIndexFields = append(finalIndexFields, &nemgen.IndexField{
 			FieldUuid: indexFields[id.ColumnName].Uuid,
 			Priority:  id.Seq,
 			Order:     nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_DESC,
+			Length:    length,
 		})
 	}
 
