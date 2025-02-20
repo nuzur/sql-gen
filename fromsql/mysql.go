@@ -498,7 +498,7 @@ func mapMysqlFKDetailsToRelationship(in *mysqlForeignKeyDetails, tableName strin
 
 	var toField *nemgen.Field
 	for _, f := range toEntity.Fields {
-		if f.Identifier == in.ColumnName {
+		if f.Identifier == in.ReferencedColumnName {
 			toField = f
 			break
 		}
