@@ -481,7 +481,7 @@ func mapMysqlIndexDetailsToIndex(in []*mysqlIndexDetails, fields []*nemgen.Field
 		finalIndexFields = append(finalIndexFields, &nemgen.IndexField{
 			FieldUuid: indexFields[id.ColumnName].Uuid,
 			Priority:  id.Seq,
-			Order:     nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_DESC,
+			Order:     nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_ASC,
 			Length:    length,
 		})
 	}
