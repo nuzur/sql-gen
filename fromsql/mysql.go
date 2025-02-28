@@ -207,12 +207,17 @@ func (rt *sqlremote) buildIndexesFromMysql(tableName string, fields []*nemgen.Fi
 		FROM
 			INFORMATION_SCHEMA.STATISTICS s
 				LEFT OUTER JOIN
-			INFORMATION_SCHEMA.TABLE_CONSTRAINTS t ON t.TABLE_SCHEMA = s.TABLE_SCHEMA
-				AND t.TABLE_NAME = s.TABLE_NAME
-				AND s.INDEX_NAME = t.CONSTRAINT_NAME
+			INFORMATION_SCHEMA.TABLE_CONSTRAINTS t 
+				ON t.TABLE_SCHEMA = s.TABLE_SCHEMA
+					AND t.TABLE_NAME = s.TABLE_NAME
+					AND s.INDEX_NAME = t.CONSTRAINT_NAME
+				LEFT OUTER JOIN 
+			INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+				ON kcu.constraint_name = s.index_name
 		WHERE
 			0 = 0 AND s.TABLE_SCHEMA = '%s'
-				AND s.table_name = '%s'`,
+				AND s.table_name = '%s'
+		ORDER BY kcu.ORDINAL_POSITION`,
 		rt.userConnection.DbSchema,
 		tableName)
 
