@@ -16,6 +16,16 @@ CREATE INDEX "index_email" ON "user" ("email");
 CREATE INDEX "index_status" ON "user" ("status");
 CREATE INDEX "index_updated_at" ON "user" ("updated_at");
 
+CREATE TABLE IF NOT EXISTS "folder" (
+    "uuid" UUID NOT NULL,
+    "version" INTEGER NOT NULL,
+    "status" INTEGER NOT NULL,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_by" UUID NOT NULL,
+    "updated_by" UUID NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS "post" (
     "uuid" UUID NOT NULL,
     "version" INTEGER NOT NULL,
@@ -37,14 +47,4 @@ CREATE TABLE IF NOT EXISTS "post" (
         REFERENCES "user" ("uuid")
 );
 CREATE INDEX "nuevo_indice" ON "post" ("slug");
-
-CREATE TABLE IF NOT EXISTS "folder" (
-    "uuid" UUID NOT NULL,
-    "version" INTEGER NOT NULL,
-    "status" INTEGER NOT NULL,
-    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "created_by" UUID NOT NULL,
-    "updated_by" UUID NOT NULL
-);
 

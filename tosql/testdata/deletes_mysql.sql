@@ -3,13 +3,13 @@ DELETE FROM `user`
 WHERE
 `uuid` = ? AND `version` = ?;
 
--- name: DeletePost :execresult
-DELETE FROM `post`
+-- name: DeleteFolder :execresult
+DELETE FROM `folder`
 WHERE
 `uuid` = ?;
 
--- name: DeleteFolder :execresult
-DELETE FROM `folder`
+-- name: DeletePost :execresult
+DELETE FROM `post`
 WHERE
 `uuid` = ?;
 
