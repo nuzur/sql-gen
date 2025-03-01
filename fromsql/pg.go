@@ -198,7 +198,7 @@ func (rt *sqlremote) buildFieldsFromPg(tableName string, indexDetails []*pgIndex
 
 func (rt *sqlremote) fetchPgIndexDetails(tableName string) ([]*pgIndexDetails, error) {
 	indexesQuery := fmt.Sprintf(`
-			SELECT i.indexrelid::regclass AS index_name,                                    
+			SELECT distinct i.indexrelid::regclass AS index_name,                                    
 				k.i AS index_order,                                                                                                             
 				coalesce(a.attname,                                                     
 							(('{' || pg_get_expr(                                          
@@ -402,8 +402,12 @@ func mapPgIndexDetailsToIndex(in []*pgIndexDetails, fields []*nemgen.Field) *nem
 	first := in[0]
 
 	columns := []string{}
+	isColumnKey := make(map[string]bool)
+	isColumnUnique := make(map[string]bool)
 	for _, id := range in {
 		columns = append(columns, id.ColumnName)
+		isColumnKey[id.ColumnName] = id.IsKey
+		isColumnUnique[id.ColumnName] = id.IsUnique
 	}
 
 	indexFields := make(map[string]*nemgen.Field)
@@ -411,12 +415,11 @@ func mapPgIndexDetailsToIndex(in []*pgIndexDetails, fields []*nemgen.Field) *nem
 	for _, f := range fields {
 		if slices.Contains(columns, f.Identifier) {
 			indexFields[f.Identifier] = f
-			if f.Key {
-				indexType = nemgen.IndexType_INDEX_TYPE_PRIMARY
-			}
-
-			if f.Unique {
+			if isColumnUnique[f.Identifier] {
 				indexType = nemgen.IndexType_INDEX_TYPE_UNIQUE
+			}
+			if isColumnKey[f.Identifier] {
+				indexType = nemgen.IndexType_INDEX_TYPE_PRIMARY
 			}
 		}
 	}
