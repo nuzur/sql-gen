@@ -49,13 +49,13 @@ func SortStandaloneEntities(pv *nemgen.ProjectVersion) {
 				relsFromEntity, relsFromEntityFound := relsFromEntity[e.Uuid]
 				if relsFromEntityFound {
 					allFound := true
-					fmt.Printf("Checking entity: %s\n", entitiesMap[e.Uuid].Identifier)
 					for _, r := range relsFromEntity {
-						fmt.Printf("Is added entity: %s\n", entitiesMap[r.To.TypeConfig.Entity.EntityUuid].Identifier)
-						if _, addedEntitiesFound := addedEntities[r.To.TypeConfig.Entity.EntityUuid]; addedEntitiesFound {
-							if !addedEntitiesFound {
-								allFound = false
-								break
+						if r.To != nil && r.To.TypeConfig != nil && r.To.TypeConfig.Entity != nil {
+							if _, addedEntitiesFound := addedEntities[r.To.TypeConfig.Entity.EntityUuid]; addedEntitiesFound {
+								if !addedEntitiesFound {
+									allFound = false
+									break
+								}
 							}
 						}
 					}
@@ -86,13 +86,13 @@ func SortStandaloneEntities(pv *nemgen.ProjectVersion) {
 		relsFromEntity, relsFromEntityFound := relsFromEntity[e]
 		if relsFromEntityFound {
 			allFound := true
-			fmt.Printf("Checking entity(2): %s\n", entitiesMap[e].Identifier)
 			for _, r := range relsFromEntity {
-				fmt.Printf("Is added entity(2): %s\n", entitiesMap[r.To.TypeConfig.Entity.EntityUuid].Identifier)
-				if _, addedEntitiesFound := addedEntities[r.To.TypeConfig.Entity.EntityUuid]; addedEntitiesFound {
-					if !addedEntitiesFound {
-						allFound = false
-						break
+				if r.To != nil && r.To.TypeConfig != nil && r.To.TypeConfig.Entity != nil {
+					if _, addedEntitiesFound := addedEntities[r.To.TypeConfig.Entity.EntityUuid]; addedEntitiesFound {
+						if !addedEntitiesFound {
+							allFound = false
+							break
+						}
 					}
 				}
 			}
