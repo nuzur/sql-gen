@@ -215,7 +215,7 @@ func (rt *sqlremote) fetchPgIndexDetails(tableName string) ([]*pgIndexDetails, e
 			CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, i)         
 			LEFT JOIN pg_attribute AS a                                                 
 				ON i.indrelid = a.attrelid AND k.attnum = a.attnum                       
-			WHERE i.indrelid = '%s'::regclass;;
+			WHERE i.indrelid = '%s'::regclass;
 			`,
 		//rt.userConnection.DbSchema,
 		tableName)

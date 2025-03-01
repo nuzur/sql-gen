@@ -46,6 +46,8 @@ func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, e
 
 	projectVersion := req.ProjectVersion
 
+	SortStandaloneEntities(projectVersion)
+
 	entities := []SchemaEntity{}
 	for _, e := range projectVersion.Entities {
 		if slices.Contains(configvalues.Entities, e.Uuid) {
