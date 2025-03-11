@@ -96,8 +96,9 @@ func SortStandaloneEntities(pv *nemgen.ProjectVersion) {
 					}
 				}
 			}
-			if allFound {
-				sortedEntities = append(sortedEntities, entitiesMap[e])
+			entity, entityFound := entitiesMap[e]
+			if allFound && entityFound {
+				sortedEntities = append(sortedEntities, entity)
 				addedEntities[e] = true
 			}
 		}
