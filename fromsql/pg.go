@@ -10,6 +10,7 @@ import (
 	"github.com/gofrs/uuid"
 	nemgen "github.com/nuzur/nem/idl/gen"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type pgColumnDetails struct {
@@ -500,6 +501,9 @@ func mapPgFKDetailsToRelationship(in *pgForeignKeyDetails, tableName string, ent
 		},
 		Status:        nemgen.RelationshipStatus_RELATIONSHIP_STATUS_ACTIVE,
 		UseForeignKey: true,
+		Cardinality:   nemgen.RelationshipCardinality_RELATIONSHIP_CARDINALITY_ONE_TO_ONE,
+		CreatedAt:     timestamppb.Now(),
+		UpdatedAt:     timestamppb.Now(),
 	}
 
 }
