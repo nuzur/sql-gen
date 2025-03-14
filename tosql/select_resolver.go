@@ -67,6 +67,11 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 						indexMap[i.Uuid] = i
 					}
 				}
+			} else {
+				if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX {
+					indexIds = append(indexIds, i.Uuid)
+					indexMap[i.Uuid] = i
+				}
 			}
 		} else {
 			if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX {
@@ -99,7 +104,6 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 							Field:  *mappedField,
 							IsLast: false,
 						}
-
 						if first {
 							first = false
 							name = fmt.Sprintf("%s%s", name, strcase.ToCamel(field.Identifier))

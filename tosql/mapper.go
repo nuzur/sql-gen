@@ -25,10 +25,9 @@ func MapEntityToTypes(e *nemgen.Entity, projectVersion *nemgen.ProjectVersion, d
 		if f.Status == nemgen.FieldStatus_FIELD_STATUS_ACTIVE {
 			fieldIdentifers[f.Uuid] = f.Identifier
 			ft := mapField(f, dbType)
-			if ft == nil {
-				continue
+			if ft != nil {
+				fields = append(fields, *ft)
 			}
-			fields = append(fields, *ft)
 		}
 	}
 
