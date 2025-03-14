@@ -53,17 +53,19 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 	timeFields := []SchemaField{}
 	for _, i := range indexes {
 		if len(i.Fields) == 1 {
-			field := fieldMap[i.Fields[0].FieldUuid]
-			ft := field.Type
-			if ft == nemgen.FieldType_FIELD_TYPE_DATETIME || ft == nemgen.FieldType_FIELD_TYPE_DATE {
-				mappedField := mapField(field, dbType)
-				if mappedField != nil {
-					timeFields = append(timeFields, *mappedField)
-				}
-			} else {
-				if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX {
-					indexIds = append(indexIds, i.Uuid)
-					indexMap[i.Uuid] = i
+			field, found := fieldMap[i.Fields[0].FieldUuid]
+			if found {
+				ft := field.Type
+				if ft == nemgen.FieldType_FIELD_TYPE_DATETIME || ft == nemgen.FieldType_FIELD_TYPE_DATE {
+					mappedField := mapField(field, dbType)
+					if mappedField != nil {
+						timeFields = append(timeFields, *mappedField)
+					}
+				} else {
+					if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX {
+						indexIds = append(indexIds, i.Uuid)
+						indexMap[i.Uuid] = i
+					}
 				}
 			}
 		} else {
