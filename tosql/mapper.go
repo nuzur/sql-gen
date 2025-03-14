@@ -25,7 +25,10 @@ func MapEntityToTypes(e *nemgen.Entity, projectVersion *nemgen.ProjectVersion, d
 		if f.Status == nemgen.FieldStatus_FIELD_STATUS_ACTIVE {
 			fieldIdentifers[f.Uuid] = f.Identifier
 			ft := mapField(f, dbType)
-			fields = append(fields, ft)
+			if ft == nil {
+				continue
+			}
+			fields = append(fields, *ft)
 		}
 	}
 
@@ -58,7 +61,11 @@ func MapEntityToTypes(e *nemgen.Entity, projectVersion *nemgen.ProjectVersion, d
 	return fields, indexes, constraints
 }
 
-func mapField(f *nemgen.Field, dbType db.DBType) SchemaField {
+func mapField(f *nemgen.Field, dbType db.DBType) *SchemaField {
+	if f == nil || f.Identifier == "" || f.Type == nemgen.FieldType_FIELD_TYPE_INVALID {
+		return nil
+	}
+
 	fieldType := ""
 	if dbType == db.MYSQLDBType {
 		fieldType = FieldTypeToMYSQL(f)
@@ -88,16 +95,19 @@ func mapField(f *nemgen.Field, dbType db.DBType) SchemaField {
 	case nemgen.FieldType_FIELD_TYPE_DATETIME:
 		ft.Default = "DEFAULT CURRENT_TIMESTAMP"
 	}
-	return ft
+	return &ft
 }
 
 func mapFieldsToSelectFields(fields []*nemgen.Field, dbType db.DBType) []SchemaSelectStatementField {
 	res := []SchemaSelectStatementField{}
 	for _, f := range fields {
 		sf := mapField(f, dbType)
+		if sf == nil {
+			continue
+		}
 		nf := SchemaSelectStatementField{
 			Name:   f.Identifier,
-			Field:  sf,
+			Field:  *sf,
 			IsLast: false,
 		}
 		res = append(res, nf)

@@ -56,7 +56,10 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 			field := fieldMap[i.Fields[0].FieldUuid]
 			ft := field.Type
 			if ft == nemgen.FieldType_FIELD_TYPE_DATETIME || ft == nemgen.FieldType_FIELD_TYPE_DATE {
-				timeFields = append(timeFields, mapField(field, dbType))
+				mappedField := mapField(field, dbType)
+				if mappedField != nil {
+					timeFields = append(timeFields, *mappedField)
+				}
 			} else {
 				if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX {
 					indexIds = append(indexIds, i.Uuid)
@@ -87,17 +90,20 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 				_, exists := fields[indexField.FieldUuid]
 				if !exists {
 					field := fieldMap[indexField.FieldUuid]
-					fields[indexField.FieldUuid] = SchemaSelectStatementField{
-						Name:   field.Identifier,
-						Field:  mapField(field, dbType),
-						IsLast: false,
-					}
+					mappedField := mapField(field, dbType)
+					if mappedField != nil {
+						fields[indexField.FieldUuid] = SchemaSelectStatementField{
+							Name:   field.Identifier,
+							Field:  *mappedField,
+							IsLast: false,
+						}
 
-					if first {
-						first = false
-						name = fmt.Sprintf("%s%s", name, strcase.ToCamel(field.Identifier))
-					} else {
-						name = fmt.Sprintf("%sAnd%s", name, strcase.ToCamel(field.Identifier))
+						if first {
+							first = false
+							name = fmt.Sprintf("%s%s", name, strcase.ToCamel(field.Identifier))
+						} else {
+							name = fmt.Sprintf("%sAnd%s", name, strcase.ToCamel(field.Identifier))
+						}
 					}
 				}
 			}

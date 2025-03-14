@@ -7,6 +7,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/iancoleman/strcase v0.3.0
 	github.com/lib/pq v1.10.9
+	github.com/nuzur/extension-sdk v0.0.57
 	github.com/nuzur/filetools v0.0.3
 	github.com/nuzur/nem v1.0.2
 	github.com/stretchr/testify v1.10.0
@@ -26,6 +27,6 @@ require (
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
-	google.golang.org/grpc v1.69.4 // indirect
+	google.golang.org/grpc v1.69.4
 	google.golang.org/protobuf v1.36.4 // indirect
 )
