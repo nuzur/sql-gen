@@ -130,7 +130,14 @@ func mapIndexes(e *nemgen.Entity, dbType db.DBType, fieldIdentifers map[string]s
 		if i.Status == nemgen.IndexStatus_INDEX_STATUS_ACTIVE {
 			fieldNames := make(map[string]string)
 			for _, fi := range i.Fields {
-				fieldNames[fi.FieldUuid] = fieldIdentifers[fi.FieldUuid]
+				identifier, found := fieldIdentifers[fi.FieldUuid]
+				if found {
+					fieldNames[fi.FieldUuid] = identifier
+				}
+			}
+
+			if len(fieldNames) == 0 {
+				continue
 			}
 
 			indexTypePrefix := ""

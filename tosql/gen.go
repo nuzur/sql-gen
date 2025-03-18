@@ -51,6 +51,10 @@ func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, e
 	entities := []SchemaEntity{}
 	for _, e := range projectVersion.Entities {
 		if slices.Contains(configvalues.Entities, e.Uuid) {
+			if e.Identifier == "" {
+				continue
+			}
+
 			fields, indexes, constraints := MapEntityToTypes(e, projectVersion, configvalues.DBType)
 			selects := ResolveSelectStatements(e, configvalues.DBType)
 			primaryKeys := EntityPrimaryKeys(e)
