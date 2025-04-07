@@ -26,6 +26,7 @@ func TestGenPG(t *testing.T) {
 				"b8629dd5-f6e5-483f-893a-842357e171fc",
 				"6f9ca9c7-6af3-4301-82d2-739ec84eab83",
 				"de4f4b45-79b5-4f6b-9a2e-2d2d3a660aae",
+				"e3b0c442-98fc-4c2a-9c4e-8f8f8f8f8f8f",
 			},
 			Actions: []Action{
 				CreateAction,

@@ -26,6 +26,17 @@ CREATE TABLE IF NOT EXISTS "folder" (
     "updated_by" UUID NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS "single_key" (
+    "uuid" UUID NOT NULL,
+    "version" INTEGER NOT NULL,
+    "status" INTEGER NOT NULL,
+    "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_by" UUID NOT NULL,
+    "updated_by" UUID NOT NULL,
+    PRIMARY KEY ("uuid")
+);
+
 CREATE TABLE IF NOT EXISTS "post" (
     "uuid" UUID NOT NULL,
     "version" INTEGER NOT NULL,

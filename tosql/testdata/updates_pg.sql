@@ -12,6 +12,13 @@ SET
 WHERE
 "uuid" = ?;
 
+-- name: UpdateSingleKey :exec
+UPDATE "single_key"
+SET
+"uuid" = ?, "version" = ?, "status" = ?, "created_at" = ?, "updated_at" = ?, "created_by" = ?, "updated_by" = ?
+WHERE
+"uuid" = ?;
+
 -- name: UpdatePost :exec
 UPDATE "post"
 SET

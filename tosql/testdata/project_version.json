@@ -5187,6 +5187,654 @@
             },
             "created_by_uuid": "00000000-0000-0000-0000-000000000000",
             "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+            "uuid": "e3b0c442-98fc-4c2a-9c4e-8f8f8f8f8f8f",
+            "version": 1728325374117,
+            "identifier": "single_key",
+            "fields": [
+                {
+                    "uuid": "713c34d6-4b51-4830-85d8-dfa54ff051f7",
+                    "version": 1728325374116,
+                    "identifier": "uuid",
+                    "type": 1,
+                    "type_config": {
+                        "integer": {},
+                        "float": {},
+                        "decimal": {},
+                        "char": {},
+                        "varchar": {},
+                        "text": {},
+                        "encrypted": {},
+                        "email": {},
+                        "phone": {},
+                        "url": {},
+                        "file": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "image": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "video": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "audio": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "enum": {
+                            "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                        },
+                        "json": {},
+                        "array": {
+                            "type_config": {
+                                "integer": {},
+                                "float": {},
+                                "decimal": {},
+                                "char": {},
+                                "varchar": {},
+                                "encrypted": {},
+                                "url": {},
+                                "email": {},
+                                "phone": {},
+                                "date": {},
+                                "datetime": {},
+                                "enum": {
+                                    "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "date": {},
+                        "datetime": {},
+                        "slug": {}
+                    },
+                    "required": true,
+                    "key": true,
+                    "status": 1,
+                    "created_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "updated_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                    "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                    "uuid": "429f4e0c-42b3-422d-a70f-901076e0a52a",
+                    "identifier": "version",
+                    "description": "Version",
+                    "type": 2,
+                    "type_config": {
+                        "integer": {},
+                        "float": {},
+                        "decimal": {},
+                        "char": {},
+                        "varchar": {},
+                        "text": {},
+                        "encrypted": {},
+                        "email": {},
+                        "phone": {},
+                        "url": {},
+                        "file": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "image": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "video": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "audio": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "enum": {
+                            "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                        },
+                        "json": {},
+                        "array": {
+                            "type_config": {
+                                "integer": {},
+                                "float": {},
+                                "decimal": {},
+                                "char": {},
+                                "varchar": {},
+                                "encrypted": {},
+                                "url": {},
+                                "email": {},
+                                "phone": {},
+                                "date": {},
+                                "datetime": {},
+                                "enum": {
+                                    "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "date": {},
+                        "datetime": {},
+                        "slug": {}
+                    },
+                    "required": true,
+                    "status": 1,
+                    "created_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "updated_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                    "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                    "uuid": "371e3ab6-d3f4-4c6b-93d8-d4ce6288acb5",
+                    "version": 1727912941609,
+                    "identifier": "status",
+                    "description": "Status",
+                    "type": 22,
+                    "type_config": {
+                        "integer": {},
+                        "float": {},
+                        "decimal": {},
+                        "char": {},
+                        "varchar": {},
+                        "text": {},
+                        "encrypted": {},
+                        "email": {},
+                        "phone": {},
+                        "url": {},
+                        "file": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "image": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "video": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "audio": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "enum": {
+                            "enum_uuid": "5221e0ea-5410-418b-b365-eb45394be434"
+                        },
+                        "json": {},
+                        "array": {
+                            "type_config": {
+                                "integer": {},
+                                "float": {},
+                                "decimal": {},
+                                "char": {},
+                                "varchar": {},
+                                "encrypted": {},
+                                "url": {},
+                                "email": {},
+                                "phone": {},
+                                "date": {},
+                                "datetime": {},
+                                "enum": {
+                                    "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "date": {},
+                        "datetime": {},
+                        "slug": {}
+                    },
+                    "required": true,
+                    "status": 1,
+                    "created_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "updated_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                    "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                    "uuid": "e74b81d8-0a58-4d55-848b-db5a30ee8cab",
+                    "identifier": "created_at",
+                    "description": "Created At",
+                    "type": 26,
+                    "type_config": {
+                        "integer": {},
+                        "float": {},
+                        "decimal": {},
+                        "char": {},
+                        "varchar": {},
+                        "text": {},
+                        "encrypted": {},
+                        "email": {},
+                        "phone": {},
+                        "url": {},
+                        "file": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "image": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "video": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "audio": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "enum": {
+                            "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                        },
+                        "json": {},
+                        "array": {
+                            "type_config": {
+                                "integer": {},
+                                "float": {},
+                                "decimal": {},
+                                "char": {},
+                                "varchar": {},
+                                "encrypted": {},
+                                "url": {},
+                                "email": {},
+                                "phone": {},
+                                "date": {},
+                                "datetime": {},
+                                "enum": {
+                                    "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "date": {},
+                        "datetime": {},
+                        "slug": {}
+                    },
+                    "required": true,
+                    "status": 1,
+                    "created_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "updated_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                    "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                    "uuid": "f55b6eb5-fe92-4364-a2da-3a10b434e58d",
+                    "identifier": "updated_at",
+                    "description": "Updated At",
+                    "type": 26,
+                    "type_config": {
+                        "integer": {},
+                        "float": {},
+                        "decimal": {},
+                        "char": {},
+                        "varchar": {},
+                        "text": {},
+                        "encrypted": {},
+                        "email": {},
+                        "phone": {},
+                        "url": {},
+                        "file": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "image": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "video": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "audio": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "enum": {
+                            "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                        },
+                        "json": {},
+                        "array": {
+                            "type_config": {
+                                "integer": {},
+                                "float": {},
+                                "decimal": {},
+                                "char": {},
+                                "varchar": {},
+                                "encrypted": {},
+                                "url": {},
+                                "email": {},
+                                "phone": {},
+                                "date": {},
+                                "datetime": {},
+                                "enum": {
+                                    "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "date": {},
+                        "datetime": {},
+                        "slug": {}
+                    },
+                    "required": true,
+                    "status": 1,
+                    "created_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "updated_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                    "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                    "uuid": "2e52d2da-9fa7-4904-8a04-431cad6b4255",
+                    "identifier": "created_by",
+                    "description": "Created By",
+                    "type": 1,
+                    "type_config": {
+                        "integer": {},
+                        "float": {},
+                        "decimal": {},
+                        "char": {},
+                        "varchar": {},
+                        "text": {},
+                        "encrypted": {},
+                        "email": {},
+                        "phone": {},
+                        "url": {},
+                        "file": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "image": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "video": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "audio": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "enum": {
+                            "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                        },
+                        "json": {},
+                        "array": {
+                            "type_config": {
+                                "integer": {},
+                                "float": {},
+                                "decimal": {},
+                                "char": {},
+                                "varchar": {},
+                                "encrypted": {},
+                                "url": {},
+                                "email": {},
+                                "phone": {},
+                                "date": {},
+                                "datetime": {},
+                                "enum": {
+                                    "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "date": {},
+                        "datetime": {},
+                        "slug": {}
+                    },
+                    "required": true,
+                    "status": 1,
+                    "created_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "updated_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                    "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                    "uuid": "539bb563-d58c-44fd-a578-041f257d74b3",
+                    "identifier": "updated_by",
+                    "description": "Updated By",
+                    "type": 1,
+                    "type_config": {
+                        "integer": {},
+                        "float": {},
+                        "decimal": {},
+                        "char": {},
+                        "varchar": {},
+                        "text": {},
+                        "encrypted": {},
+                        "email": {},
+                        "phone": {},
+                        "url": {},
+                        "file": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "image": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "video": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "audio": {
+                            "storage_config": {
+                                "object_store": {
+                                    "object_store_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "enum": {
+                            "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                        },
+                        "json": {},
+                        "array": {
+                            "type_config": {
+                                "integer": {},
+                                "float": {},
+                                "decimal": {},
+                                "char": {},
+                                "varchar": {},
+                                "encrypted": {},
+                                "url": {},
+                                "email": {},
+                                "phone": {},
+                                "date": {},
+                                "datetime": {},
+                                "enum": {
+                                    "enum_uuid": "00000000-0000-0000-0000-000000000000"
+                                }
+                            }
+                        },
+                        "date": {},
+                        "datetime": {},
+                        "slug": {}
+                    },
+                    "required": true,
+                    "status": 1,
+                    "created_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "updated_at": {
+                        "seconds": 1727654278,
+                        "nanos": 944000000
+                    },
+                    "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                    "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                }
+            ],
+            "type": 1,
+            "type_config": {
+                "standalone": {
+                    "store_uuid": "00000000-0000-0000-0000-000000000000",
+                    "version_config": {
+                        "config": {
+                            "field": {
+                                "version_field_uuid": "00000000-0000-0000-0000-000000000000"
+                            },
+                            "entity": {
+                                "entity_uuid": "00000000-0000-0000-0000-000000000000",
+                                "version_field_uuid": "00000000-0000-0000-0000-000000000000"
+                            }
+                        }
+                    },
+                    "indexes": [
+                        {
+                            "uuid": "7d29baea-56d2-40f0-a2c4-007401144b8b",
+                            "identifier": "pk_uuid",
+                            "type": 2,
+                            "fields": [
+                                {
+                                    "field_uuid": "713c34d6-4b51-4830-85d8-dfa54ff051f7",
+                                    "priority": 1,
+                                    "order": 1
+                                }
+                            ],
+                            "status": 1,
+                            "created_at": {
+                                "seconds": 1728263463,
+                                "nanos": 787000000
+                            },
+                            "updated_at": {
+                                "seconds": 1728263463,
+                                "nanos": 787000000
+                            },
+                            "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                            "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                        }
+                    ]
+                },
+                "dependent": {}
+            },
+            "render": {
+                "x": 5236.913881907799,
+                "y": 3103.85275115954
+            },
+            "status": 1,
+            "created_at": {
+                "seconds": 1727654278,
+                "nanos": 944000000
+            },
+            "updated_at": {
+                "seconds": 1727654278,
+                "nanos": 944000000
+            },
+            "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+            "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
         }
     ],
     "relationships": [

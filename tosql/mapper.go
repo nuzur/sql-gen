@@ -39,9 +39,28 @@ func MapEntityToTypes(e *nemgen.Entity, projectVersion *nemgen.ProjectVersion, d
 		constraints = mapRelationships(e, projectVersion, dbType)
 	}
 
-	if len(indexes) > 0 {
-		for i := 0; i < len(indexes)-1; i++ {
-			indexes[i].HasComma = true
+	// for postgres only primary and unique indexes should have a comma
+	// as they are the only ones that are in the create statement
+	if dbType == db.PGDBType {
+		if len(indexes) > 0 {
+			previousIndex := -1
+			for i := 0; i < len(indexes)-1; i++ {
+				if indexes[i].Type == "primary" || indexes[i].Type == "unique" {
+					if previousIndex != -1 {
+						indexes[previousIndex].HasComma = true
+					}
+					previousIndex = i
+				}
+			}
+			if previousIndex != -1 {
+				indexes[previousIndex].HasComma = true
+			}
+		}
+	} else {
+		if len(indexes) > 0 {
+			for i := 0; i < len(indexes)-1; i++ {
+				indexes[i].HasComma = true
+			}
 		}
 	}
 

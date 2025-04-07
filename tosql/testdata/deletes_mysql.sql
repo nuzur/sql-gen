@@ -8,6 +8,11 @@ DELETE FROM `folder`
 WHERE
 `uuid` = ?;
 
+-- name: DeleteSingleKey :execresult
+DELETE FROM `single_key`
+WHERE
+`uuid` = ?;
+
 -- name: DeletePost :execresult
 DELETE FROM `post`
 WHERE
