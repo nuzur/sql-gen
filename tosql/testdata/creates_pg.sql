@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS "single_key" (
     "updated_by" UUID NOT NULL,
     PRIMARY KEY ("uuid")
 );
+CREATE INDEX "nuevo_indice" ON "single_key" ("version");
 
 CREATE TABLE IF NOT EXISTS "post" (
     "uuid" UUID NOT NULL,

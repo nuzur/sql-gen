@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS `single_key` (
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `created_by` CHAR(36) NOT NULL,
     `updated_by` CHAR(36) NOT NULL,
-    PRIMARY KEY (`uuid`)
+    PRIMARY KEY (`uuid`),
+    INDEX `nuevo_indice` (`version` ASC)
 ) ENGINE = InnoDB;
 
 CREATE TABLE IF NOT EXISTS `post` (

@@ -5815,6 +5815,29 @@
                             },
                             "created_by_uuid": "00000000-0000-0000-0000-000000000000",
                             "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                        },
+                        {
+                            "uuid": "a525362d-22f5-45e1-b5b0-0b32c6b7bc8d",
+                            "identifier": "nuevo_indice",
+                            "type": 1,
+                            "fields": [
+                                {
+                                    "field_uuid": "429f4e0c-42b3-422d-a70f-901076e0a52a",
+                                    "priority": 1,
+                                    "order": 1
+                                }
+                            ],
+                            "status": 1,
+                            "created_at": {
+                                "seconds": 1728263459,
+                                "nanos": 100000000
+                            },
+                            "updated_at": {
+                                "seconds": 1728263459,
+                                "nanos": 100000000
+                            },
+                            "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                            "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
                         }
                     ]
                 },
