@@ -35,10 +35,6 @@ func GenerateSQL(ctx context.Context, params GenerateRequest) (*tosql.GenerateRe
 		}
 	}
 
-	if len(entities) == 0 {
-		return nil, errors.New("no standalone entities found")
-	}
-
 	return tosql.GenerateSQL(ctx, tosql.GenerateRequest{
 		ExecutionUUID:  uuid.Must(uuid.NewV4()).String(),
 		ProjectVersion: pv,

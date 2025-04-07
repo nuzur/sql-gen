@@ -40,7 +40,7 @@ type ActionResult struct {
 
 func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, error) {
 	configvalues := req.Configvalues
-	if len(configvalues.Entities) == 0 || len(configvalues.Actions) == 0 {
+	if len(configvalues.Actions) == 0 {
 		return nil, errors.New("invalid request")
 	}
 
