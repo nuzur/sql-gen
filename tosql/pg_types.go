@@ -31,7 +31,7 @@ func FieldTypeToPG(f *nemgen.Field) string {
 		}
 		return "INTEGER"
 	case nemgen.FieldType_FIELD_TYPE_FLOAT: // 3
-		return "DOUBLE"
+		return "DOUBLE PRECISION"
 	case nemgen.FieldType_FIELD_TYPE_DECIMAL: // 4
 		return "DECIMAL"
 	case nemgen.FieldType_FIELD_TYPE_BOOLEAN: // 5
