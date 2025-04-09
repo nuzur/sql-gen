@@ -79,6 +79,23 @@ func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, e
 			entities = append(entities, entityTemplate)
 		}
 	}
+
+	if configvalues.DBType == db.PGDBType {
+		// for pg we want to make sure all index names are unique
+		indexOccurances := make(map[string]int)
+		for i := range entities {
+			for j := range entities[i].Indexes {
+				indexName := entities[i].Indexes[j].Name
+				if _, ok := indexOccurances[indexName]; ok {
+					indexOccurances[indexName]++
+					entities[i].Indexes[j].Name = fmt.Sprintf("%s_%d", indexName, indexOccurances[indexName])
+				} else {
+					indexOccurances[indexName] = 1
+				}
+			}
+		}
+	}
+
 	tpl := SchemaTemplate{
 		Entities: entities,
 	}
