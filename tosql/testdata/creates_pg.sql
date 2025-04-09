@@ -58,5 +58,5 @@ CREATE TABLE IF NOT EXISTS "post" (
         FOREIGN KEY ("user_uuid")
         REFERENCES "user" ("uuid")
 );
-CREATE INDEX "nuevo_indice" ON "post" ("slug");
+CREATE INDEX "nuevo_indice_2" ON "post" ("slug");
 
