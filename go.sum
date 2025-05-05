@@ -29,8 +29,8 @@ github.com/nuzur/extension-sdk v0.0.57 h1:IG/Qy/eMkTkGLPk3y+q3Xe65bfRLJ1AWolOwe+
 github.com/nuzur/extension-sdk v0.0.57/go.mod h1:m0sWd/EDiv4inRNtlh9+RkQ2E05mlToM/88cR++3z5U=
 github.com/nuzur/filetools v0.0.3 h1:Ns2g9/f9SqZUujZa0hkt4rbLfDpQJLcA30d7rKCZ8PE=
 github.com/nuzur/filetools v0.0.3/go.mod h1:jRAy/C7ilpw0HBDFYhXGv5+IS3WIen468z8XsFEVAdw=
-github.com/nuzur/nem v1.0.13 h1:vCbn2JhOy5Xzdq0Ogd98EEaZ+wk8mcF8UyT8321MZHo=
-github.com/nuzur/nem v1.0.13/go.mod h1:wjJnVGDnah4JEDqL8N69yXV6NYJCkvRF8Z4pr0/Cg3s=
+github.com/nuzur/nem v1.0.14 h1:5reldkwr1bzNvJGhIZd0MpsBjCud1Xi0/nEDOJMeU74=
+github.com/nuzur/nem v1.0.14/go.mod h1:17fDw6Vr6okHgdJs2YSgOv9pZN8SLe4OApGBTJwkF/E=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
