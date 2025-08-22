@@ -116,6 +116,58 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 	return &res, nil
 }
 
+type GenerateDeleteForEntityWithValuesParams struct {
+	Entity         *nemgen.Entity
+	ProjectVersion *nemgen.ProjectVersion
+	DBType         db.DBType
+	Keys           map[string]string // field uuid / value
+}
+
+func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDeleteForEntityWithValuesParams) (*string, error) {
+	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType)
+	if err != nil {
+		return nil, err
+	}
+
+	finalKeys := make(map[string]string)
+	for _, f := range entityTemplate.Fields {
+		if value, ok := params.Keys[f.Field.Uuid]; ok {
+			switch params.DBType {
+			case db.MYSQLDBType:
+				finalKeys[fmt.Sprintf("`%s`", f.Name)] = fmt.Sprintf("'%s'", EscapeValue(value))
+			case db.PGDBType:
+				finalKeys[fmt.Sprintf(`"%s"`, f.Name)] = fmt.Sprintf("'%s'", EscapeValue(value))
+			}
+		}
+	}
+
+	fileName := fmt.Sprintf("%s_%s", "delete_data", params.DBType)
+	tmplBytes, err := templates.ReadFile(fmt.Sprintf("templates/%s.tmpl", fileName))
+	if err != nil {
+		return nil, err
+	}
+
+	tpl, err := template.New("template").Parse(string(tmplBytes))
+	if err != nil {
+		return nil, fmt.Errorf("error creating template: %s %w", fileName, err)
+	}
+
+	var body bytes.Buffer
+	if err := tpl.Execute(&body, struct {
+		Entity      SchemaEntity
+		WhereClause string
+	}{
+		Entity:      entityTemplate,
+		WhereClause: entityTemplate.PrimaryKeysWhereClauseWithValues(finalKeys),
+	}); err != nil {
+		log.Println("error executing template - ", err)
+		return nil, err
+	}
+
+	res := body.String()
+	return &res, nil
+}
+
 func EscapeValue(sql string) string {
 	dest := make([]byte, 0, 2*len(sql))
 	var escape byte
