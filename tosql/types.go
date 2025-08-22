@@ -37,7 +37,19 @@ func (e SchemaEntity) PrimaryKeysIdentifiers() string {
 func (e SchemaEntity) PrimaryKeysWhereClause() string {
 	keys := []string{}
 	for _, pk := range e.PrimaryKeys {
+		// quotes already added to name
 		keys = append(keys, fmt.Sprintf("%s = ?", pk))
+	}
+	return strings.Join(keys, " AND ")
+}
+
+func (e SchemaEntity) PrimaryKeysWhereClauseWithValues(values map[string]string) string {
+	keys := []string{}
+	for _, pk := range e.PrimaryKeys {
+		if value, ok := values[pk]; ok {
+			// quotes already added to name and values already escaped and quoted
+			keys = append(keys, fmt.Sprintf("%s = %s", pk, value))
+		}
 	}
 	return strings.Join(keys, " AND ")
 }
@@ -46,10 +58,28 @@ func (e SchemaEntity) UpdateFields() string {
 	fields := []string{}
 	for _, f := range e.Fields {
 		if !slices.Contains(e.PrimaryKeys, f.Name) {
-			if e.DBType == db.MYSQLDBType {
+			switch e.DBType {
+			case db.MYSQLDBType:
 				fields = append(fields, fmt.Sprintf("`%s` = ?", f.Name))
-			} else if e.DBType == db.PGDBType {
+			case db.PGDBType:
 				fields = append(fields, fmt.Sprintf(`"%s" = ?`, f.Name))
+			}
+		}
+	}
+	return strings.Join(fields, ", ")
+}
+
+func (e SchemaEntity) UpdateFieldsWithValues(values map[string]string) string {
+	fields := []string{}
+	for _, f := range e.Fields {
+		if !slices.Contains(e.PrimaryKeys, f.Name) {
+			if value, ok := values[f.Field.Uuid]; ok {
+				switch e.DBType {
+				case db.MYSQLDBType:
+					fields = append(fields, fmt.Sprintf("`%s` = '%s'", f.Name, EscapeValue(value)))
+				case db.PGDBType:
+					fields = append(fields, fmt.Sprintf(`"%s" = '%s'`, f.Name, EscapeValue(value)))
+				}
 			}
 		}
 	}
