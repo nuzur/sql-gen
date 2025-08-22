@@ -1,0 +1,15 @@
+{{ $values := .Values}}
+INSERT INTO "{{.Entity.Name}}"
+(
+    {{- range $field := .Entity.Fields -}}
+        "{{$field.Name}}"
+        {{- if eq $field.HasComma true}},{{end -}}
+    {{- end -}}
+)
+VALUES
+(
+    {{- range $field := .Entity.Fields -}}
+        {{ index $values $field.Field.Uuid }}
+        {{- if eq $field.HasComma true}},{{end -}}
+    {{- end -}}
+);
