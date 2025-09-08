@@ -68,14 +68,14 @@ func (e SchemaEntity) PrimaryKeysWhereClauseWithValues(values map[string]string)
 }
 
 func (e SchemaEntity) UpdateFields() string {
-	return e.UpdateFieldsParam(false, nil)
+	return e.UpdateFieldsParam(false, false, nil)
 }
 
-func (e SchemaEntity) UpdateFieldsParam(forGolang bool, values map[string]string) string {
+func (e SchemaEntity) UpdateFieldsParam(forGolang bool, onlyWithValue bool, values map[string]string) string {
 	fields := []string{}
 	for _, f := range e.Fields {
 		if !f.Field.Key {
-			if _, ok := values[f.Field.Uuid]; ok {
+			if _, ok := values[f.Field.Uuid]; ok || !onlyWithValue {
 				switch e.DBType {
 				case db.MYSQLDBType:
 					fields = append(fields, fmt.Sprintf("`%s` = ?", f.Name))
