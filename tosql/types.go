@@ -35,10 +35,23 @@ func (e SchemaEntity) PrimaryKeysIdentifiers() string {
 }
 
 func (e SchemaEntity) PrimaryKeysWhereClause() string {
+	return e.PrimaryKeysWhereClauseParam(false)
+}
+
+func (e SchemaEntity) PrimaryKeysWhereClauseParam(forGolang bool) string {
 	keys := []string{}
 	for _, pk := range e.PrimaryKeys {
 		// quotes already added to name
-		keys = append(keys, fmt.Sprintf("%s = ?", pk))
+		switch e.DBType {
+		case db.MYSQLDBType:
+			keys = append(keys, fmt.Sprintf("%s = ?", pk))
+		case db.PGDBType:
+			if forGolang {
+				keys = append(keys, fmt.Sprintf("%s = $%d", pk, len(keys)+1))
+			} else {
+				keys = append(keys, fmt.Sprintf("%s = ?", pk))
+			}
+		}
 	}
 	return strings.Join(keys, " AND ")
 }
@@ -55,6 +68,10 @@ func (e SchemaEntity) PrimaryKeysWhereClauseWithValues(values map[string]string)
 }
 
 func (e SchemaEntity) UpdateFields() string {
+	return e.UpdateFieldsParam(false)
+}
+
+func (e SchemaEntity) UpdateFieldsParam(forGolang bool) string {
 	fields := []string{}
 	for _, f := range e.Fields {
 		if !slices.Contains(e.PrimaryKeys, f.Name) {
@@ -62,7 +79,11 @@ func (e SchemaEntity) UpdateFields() string {
 			case db.MYSQLDBType:
 				fields = append(fields, fmt.Sprintf("`%s` = ?", f.Name))
 			case db.PGDBType:
-				fields = append(fields, fmt.Sprintf(`"%s" = ?`, f.Name))
+				if forGolang {
+					fields = append(fields, fmt.Sprintf(`"%s" = $%d`, f.Name, len(fields)+1))
+				} else {
+					fields = append(fields, fmt.Sprintf(`"%s" = ?`, f.Name))
+				}
 			}
 		}
 	}

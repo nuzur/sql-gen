@@ -18,19 +18,35 @@ type GenerateInsertForEntityWithValuesParams struct {
 	Values         map[string]string // field uuid / value
 }
 
-func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInsertForEntityWithValuesParams) (*string, error) {
+type GenerateStatementResult struct {
+	SQL             string   `json:"sql"` // display only
+	ParametrizedSQL string   `json:"parametrized_sql"`
+	Params          []string `json:"params"`
+}
+
+func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInsertForEntityWithValuesParams) (*GenerateStatementResult, error) {
 	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType)
 	if err != nil {
 		return nil, err
 	}
 
 	// go through values and add quotes and escape
-	finalValues := make(map[string]string)
+	escapedValues := make(map[string]string)
+	paramsPlaceholders := make(map[string]string)
+	paramsValues := []string{}
 	for _, f := range entityTemplate.Fields {
+		switch params.DBType {
+		case db.MYSQLDBType:
+			paramsPlaceholders[f.Field.Uuid] = "?"
+		case db.PGDBType:
+			paramsPlaceholders[f.Field.Uuid] = fmt.Sprintf("$%d", len(paramsPlaceholders)+1)
+		}
 		if value, ok := params.Values[f.Field.Uuid]; ok {
-			finalValues[f.Field.Uuid] = fmt.Sprintf("'%s'", EscapeValue(value))
+			escapedValues[f.Field.Uuid] = fmt.Sprintf("'%s'", EscapeValue(value))
+			paramsValues = append(paramsValues, value)
 		} else {
-			finalValues[f.Field.Uuid] = "NULL"
+			escapedValues[f.Field.Uuid] = "NULL"
+			paramsValues = append(paramsValues, "NULL")
 		}
 	}
 
@@ -45,20 +61,39 @@ func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInser
 		return nil, fmt.Errorf("error creating template: %s %w", fileName, err)
 	}
 
+	// display sql
 	var body bytes.Buffer
 	if err := tpl.Execute(&body, struct {
 		Entity SchemaEntity
 		Values map[string]string
 	}{
 		Entity: entityTemplate,
-		Values: finalValues,
+		Values: escapedValues,
 	}); err != nil {
 		log.Println("error executing template - ", err)
 		return nil, err
 	}
+	displaySQL := body.String()
 
-	res := body.String()
-	return &res, nil
+	// parametrized sql
+	body.Reset()
+	if err := tpl.Execute(&body, struct {
+		Entity SchemaEntity
+		Values map[string]string
+	}{
+		Entity: entityTemplate,
+		Values: paramsPlaceholders,
+	}); err != nil {
+		log.Println("error executing template - ", err)
+		return nil, err
+	}
+	parametrizedSQL := body.String()
+
+	return &GenerateStatementResult{
+		SQL:             displaySQL,
+		ParametrizedSQL: parametrizedSQL,
+		Params:          paramsValues,
+	}, nil
 }
 
 type GenerateUpdateForEntityWithValuesParams struct {
@@ -69,7 +104,7 @@ type GenerateUpdateForEntityWithValuesParams struct {
 	Keys           map[string]string // field uuid / value
 }
 
-func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdateForEntityWithValuesParams) (*string, error) {
+func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdateForEntityWithValuesParams) (*GenerateStatementResult, error) {
 	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType)
 	if err != nil {
 		return nil, err
@@ -98,6 +133,7 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 		return nil, fmt.Errorf("error creating template: %s %w", fileName, err)
 	}
 
+	// display sql
 	var body bytes.Buffer
 	if err := tpl.Execute(&body, struct {
 		Entity       SchemaEntity
@@ -111,9 +147,47 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 		log.Println("error executing template - ", err)
 		return nil, err
 	}
+	displaySQL := body.String()
 
-	res := body.String()
-	return &res, nil
+	// parametrized sql
+	body.Reset()
+	if err := tpl.Execute(&body, struct {
+		Entity       SchemaEntity
+		UpdateFields string
+		WhereClause  string
+	}{
+		Entity:       entityTemplate,
+		UpdateFields: entityTemplate.UpdateFieldsParam(true),
+		WhereClause:  entityTemplate.PrimaryKeysWhereClauseParam(true),
+	}); err != nil {
+		log.Println("error executing template - ", err)
+		return nil, err
+	}
+	parametrizedSQL := body.String()
+
+	paramValues := []string{}
+	for _, f := range entityTemplate.Fields {
+		if !f.Field.Key {
+			if value, ok := params.Values[f.Field.Uuid]; ok {
+				paramValues = append(paramValues, value)
+			} else {
+				paramValues = append(paramValues, "NULL")
+			}
+		}
+	}
+	for _, f := range entityTemplate.Fields {
+		if f.Field.Key {
+			if value, ok := params.Keys[f.Field.Uuid]; ok {
+				paramValues = append(paramValues, value)
+			}
+		}
+	}
+
+	return &GenerateStatementResult{
+		SQL:             displaySQL,
+		ParametrizedSQL: parametrizedSQL,
+		Params:          paramValues,
+	}, nil
 }
 
 type GenerateDeleteForEntityWithValuesParams struct {
@@ -123,7 +197,7 @@ type GenerateDeleteForEntityWithValuesParams struct {
 	Keys           map[string]string // field uuid / value
 }
 
-func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDeleteForEntityWithValuesParams) (*string, error) {
+func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDeleteForEntityWithValuesParams) (*GenerateStatementResult, error) {
 	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType)
 	if err != nil {
 		return nil, err
@@ -152,6 +226,7 @@ func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDelet
 		return nil, fmt.Errorf("error creating template: %s %w", fileName, err)
 	}
 
+	// display sql
 	var body bytes.Buffer
 	if err := tpl.Execute(&body, struct {
 		Entity      SchemaEntity
@@ -163,9 +238,35 @@ func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDelet
 		log.Println("error executing template - ", err)
 		return nil, err
 	}
+	displaySQL := body.String()
 
-	res := body.String()
-	return &res, nil
+	// parametrized sql
+	body.Reset()
+	if err := tpl.Execute(&body, struct {
+		Entity      SchemaEntity
+		WhereClause string
+	}{
+		Entity:      entityTemplate,
+		WhereClause: entityTemplate.PrimaryKeysWhereClauseParam(true),
+	}); err != nil {
+		log.Println("error executing template - ", err)
+		return nil, err
+	}
+	parametrizedSQL := body.String()
+
+	paramValues := []string{}
+	for _, f := range entityTemplate.Fields {
+		if f.Field.Key {
+			if value, ok := params.Keys[f.Field.Uuid]; ok {
+				paramValues = append(paramValues, value)
+			}
+		}
+	}
+	return &GenerateStatementResult{
+		SQL:             displaySQL,
+		ParametrizedSQL: parametrizedSQL,
+		Params:          paramValues,
+	}, nil
 }
 
 func EscapeValue(sql string) string {
@@ -191,64 +292,8 @@ func EscapeValue(sql string) string {
 			escape = '"'
 		case '\032': /* This gives problems on Win32 */
 			escape = 'Z'
-		case '%':
-			escape = '%'
 		case ';':
 			escape = ';'
-		case '-':
-			escape = '-'
-		case '#':
-			escape = '#'
-		case '_':
-			escape = '_'
-		case '=':
-			escape = '='
-		case '+':
-			escape = '+'
-		case '<':
-			escape = '<'
-		case '>':
-			escape = '>'
-		case '(':
-			escape = '('
-		case ')':
-			escape = ')'
-		case '{':
-			escape = '{'
-		case '}':
-			escape = '}'
-		case '[':
-			escape = '['
-		case ']':
-			escape = ']'
-		case '*':
-			escape = '*'
-		case '&':
-			escape = '&'
-		case '^':
-			escape = '^'
-		case '$':
-			escape = '$'
-		case '!':
-			escape = '!'
-		case '~':
-			escape = '~'
-		case '`':
-			escape = '`'
-		case '|':
-			escape = '|'
-		case ':':
-			escape = ':'
-		case ',':
-			escape = ','
-		case '.':
-			escape = '.'
-		case '?':
-			escape = '?'
-		case '/':
-			escape = '/'
-		case '@':
-			escape = '@'
 		}
 
 		if escape != 0 {
