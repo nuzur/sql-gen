@@ -189,8 +189,66 @@ func EscapeValue(sql string) string {
 			escape = '\''
 		case '"': /* Better safe than sorry */
 			escape = '"'
-		case '\032': //十进制26,八进制32,十六进制1a, /* This gives problems on Win32 */
+		case '\032': /* This gives problems on Win32 */
 			escape = 'Z'
+		case '%':
+			escape = '%'
+		case ';':
+			escape = ';'
+		case '-':
+			escape = '-'
+		case '#':
+			escape = '#'
+		case '_':
+			escape = '_'
+		case '=':
+			escape = '='
+		case '+':
+			escape = '+'
+		case '<':
+			escape = '<'
+		case '>':
+			escape = '>'
+		case '(':
+			escape = '('
+		case ')':
+			escape = ')'
+		case '{':
+			escape = '{'
+		case '}':
+			escape = '}'
+		case '[':
+			escape = '['
+		case ']':
+			escape = ']'
+		case '*':
+			escape = '*'
+		case '&':
+			escape = '&'
+		case '^':
+			escape = '^'
+		case '$':
+			escape = '$'
+		case '!':
+			escape = '!'
+		case '~':
+			escape = '~'
+		case '`':
+			escape = '`'
+		case '|':
+			escape = '|'
+		case ':':
+			escape = ':'
+		case ',':
+			escape = ','
+		case '.':
+			escape = '.'
+		case '?':
+			escape = '?'
+		case '/':
+			escape = '/'
+		case '@':
+			escape = '@'
 		}
 
 		if escape != 0 {
