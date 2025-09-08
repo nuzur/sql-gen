@@ -74,7 +74,7 @@ func (e SchemaEntity) UpdateFields() string {
 func (e SchemaEntity) UpdateFieldsParam(forGolang bool) string {
 	fields := []string{}
 	for _, f := range e.Fields {
-		if !slices.Contains(e.PrimaryKeys, f.Name) {
+		if !f.Field.Key {
 			switch e.DBType {
 			case db.MYSQLDBType:
 				fields = append(fields, fmt.Sprintf("`%s` = ?", f.Name))
@@ -93,7 +93,7 @@ func (e SchemaEntity) UpdateFieldsParam(forGolang bool) string {
 func (e SchemaEntity) UpdateFieldsWithValues(values map[string]string) string {
 	fields := []string{}
 	for _, f := range e.Fields {
-		if !slices.Contains(e.PrimaryKeys, f.Name) {
+		if !f.Field.Key {
 			if value, ok := values[f.Field.Uuid]; ok {
 				switch e.DBType {
 				case db.MYSQLDBType:
