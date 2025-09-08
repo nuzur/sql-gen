@@ -157,7 +157,7 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 		WhereClause  string
 	}{
 		Entity:       entityTemplate,
-		UpdateFields: entityTemplate.UpdateFieldsParam(true),
+		UpdateFields: entityTemplate.UpdateFieldsParam(true, params.Values),
 		WhereClause:  entityTemplate.PrimaryKeysWhereClauseParam(true),
 	}); err != nil {
 		log.Println("error executing template - ", err)
@@ -170,8 +170,6 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 		if !f.Field.Key {
 			if value, ok := params.Values[f.Field.Uuid]; ok {
 				paramValues = append(paramValues, value)
-			} else {
-				paramValues = append(paramValues, "NULL")
 			}
 		}
 	}

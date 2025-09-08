@@ -68,21 +68,23 @@ func (e SchemaEntity) PrimaryKeysWhereClauseWithValues(values map[string]string)
 }
 
 func (e SchemaEntity) UpdateFields() string {
-	return e.UpdateFieldsParam(false)
+	return e.UpdateFieldsParam(false, nil)
 }
 
-func (e SchemaEntity) UpdateFieldsParam(forGolang bool) string {
+func (e SchemaEntity) UpdateFieldsParam(forGolang bool, values map[string]string) string {
 	fields := []string{}
 	for _, f := range e.Fields {
 		if !f.Field.Key {
-			switch e.DBType {
-			case db.MYSQLDBType:
-				fields = append(fields, fmt.Sprintf("`%s` = ?", f.Name))
-			case db.PGDBType:
-				if forGolang {
-					fields = append(fields, fmt.Sprintf(`"%s" = $%d`, f.Name, len(fields)+1))
-				} else {
-					fields = append(fields, fmt.Sprintf(`"%s" = ?`, f.Name))
+			if _, ok := values[f.Field.Uuid]; ok {
+				switch e.DBType {
+				case db.MYSQLDBType:
+					fields = append(fields, fmt.Sprintf("`%s` = ?", f.Name))
+				case db.PGDBType:
+					if forGolang {
+						fields = append(fields, fmt.Sprintf(`"%s" = $%d`, f.Name, len(fields)+1))
+					} else {
+						fields = append(fields, fmt.Sprintf(`"%s" = ?`, f.Name))
+					}
 				}
 			}
 		}
