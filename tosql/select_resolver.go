@@ -62,19 +62,19 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 						timeFields = append(timeFields, *mappedField)
 					}
 				} else {
-					if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX {
+					if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX || i.Type == nemgen.IndexType_INDEX_TYPE_UNIQUE {
 						indexIds = append(indexIds, i.Uuid)
 						indexMap[i.Uuid] = i
 					}
 				}
 			} else {
-				if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX {
+				if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX || i.Type == nemgen.IndexType_INDEX_TYPE_UNIQUE {
 					indexIds = append(indexIds, i.Uuid)
 					indexMap[i.Uuid] = i
 				}
 			}
 		} else {
-			if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX {
+			if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX || i.Type == nemgen.IndexType_INDEX_TYPE_UNIQUE {
 				indexIds = append(indexIds, i.Uuid)
 				indexMap[i.Uuid] = i
 			}
