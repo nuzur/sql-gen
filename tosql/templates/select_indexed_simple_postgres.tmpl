@@ -15,7 +15,7 @@ WHERE {{$selectIndex := 0}}
     {{range $field := $select.Fields -}} 
     "{{- $field.Name}}" = {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?{{end}} {{ if ne $field.IsLast true}}AND {{ end -}} 
     {{- end}}{{- if eq $select.IsPrimary true }};{{- end}}
-{{ if eq $select.IsPrimary false -}}LIMIT {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}, {{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?, ?{{end}};{{- end}}
+{{ if eq $select.IsPrimary false -}}LIMIT {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }} OFFSET {{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}? OFFSET ?{{end}};{{- end}}
         {{ end -}}
     {{ end }}
 
@@ -50,7 +50,7 @@ WHERE {{$selectIndex := 0}}
     "{{- $field.Name}}" = {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?{{end}} {{ if ne $field.IsLast true}}AND {{ end -}} 
     {{- end}} 
 ORDER BY {{$timeField.Name}} ASC
-LIMIT {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}, {{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?, ?{{end}};
+LIMIT {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }} OFFSET {{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}? OFFSET ?{{end}};
 
 -- name: Fetch{{$select.Name}}OrderedBy{{$timeField.NameTitle}}DESC :many
 SELECT {{ range $field := $entity.Fields -}}
@@ -63,7 +63,7 @@ WHERE {{$selectIndex := 0}}
     "{{- $field.Name}}" = {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?{{end}} {{ if ne $field.IsLast true }}AND {{ end -}} 
     {{- end}} 
 ORDER BY {{$timeField.Name}} DESC
-LIMIT {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}, {{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?, ?{{end}};
+LIMIT {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }} OFFSET {{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}? OFFSET ?{{end}};
 
             {{end -}}
         {{end -}}
