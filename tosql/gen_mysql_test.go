@@ -15,8 +15,8 @@ import (
 func TestGenMysql(t *testing.T) {
 	pvdata, err := os.ReadFile("./testdata/project_version.json")
 	assert.NoError(t, err)
-	projectVerion := &nemgen.ProjectVersion{}
-	err = json.Unmarshal(pvdata, projectVerion)
+	projectVersion := &nemgen.ProjectVersion{}
+	err = json.Unmarshal(pvdata, projectVersion)
 	assert.NoError(t, err)
 	req := GenerateRequest{
 		ExecutionUUID: uuid.Must(uuid.NewV4()).String(),
@@ -39,7 +39,7 @@ func TestGenMysql(t *testing.T) {
 				SelectForIndexedCombinedAction,
 			},
 		},
-		ProjectVersion: projectVerion,
+		ProjectVersion: projectVersion,
 	}
 	res, err := GenerateSQL(context.Background(), req)
 	assert.NoError(t, err)

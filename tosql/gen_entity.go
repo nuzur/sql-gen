@@ -15,6 +15,7 @@ type GenerateInsertForEntityWithValuesParams struct {
 	Entity         *nemgen.Entity
 	ProjectVersion *nemgen.ProjectVersion
 	DBType         db.DBType
+	ForGolang      bool
 	Values         map[string]string // field uuid / value
 }
 
@@ -25,7 +26,7 @@ type GenerateStatementResult struct {
 }
 
 func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInsertForEntityWithValuesParams) (*GenerateStatementResult, error) {
-	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType)
+	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType, params.ForGolang)
 	if err != nil {
 		return nil, err
 	}
@@ -100,12 +101,13 @@ type GenerateUpdateForEntityWithValuesParams struct {
 	Entity         *nemgen.Entity
 	ProjectVersion *nemgen.ProjectVersion
 	DBType         db.DBType
+	ForGolang      bool
 	Values         map[string]string // field uuid / value
 	Keys           map[string]string // field uuid / value
 }
 
 func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdateForEntityWithValuesParams) (*GenerateStatementResult, error) {
-	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType)
+	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType, params.ForGolang)
 	if err != nil {
 		return nil, err
 	}
@@ -192,11 +194,12 @@ type GenerateDeleteForEntityWithValuesParams struct {
 	Entity         *nemgen.Entity
 	ProjectVersion *nemgen.ProjectVersion
 	DBType         db.DBType
+	ForGolang      bool
 	Keys           map[string]string // field uuid / value
 }
 
 func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDeleteForEntityWithValuesParams) (*GenerateStatementResult, error) {
-	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType)
+	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType, params.ForGolang)
 	if err != nil {
 		return nil, err
 	}

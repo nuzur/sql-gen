@@ -17,6 +17,7 @@ type SchemaTemplate struct {
 // entity
 type SchemaEntity struct {
 	DBType           db.DBType
+	ForGolang        bool
 	Name             string
 	NameTitle        string
 	PrimaryKeys      []string
@@ -35,7 +36,7 @@ func (e SchemaEntity) PrimaryKeysIdentifiers() string {
 }
 
 func (e SchemaEntity) PrimaryKeysWhereClause() string {
-	return e.PrimaryKeysWhereClauseParam(false)
+	return e.PrimaryKeysWhereClauseParam(e.ForGolang)
 }
 
 func (e SchemaEntity) PrimaryKeysWhereClauseParam(forGolang bool) string {
@@ -68,7 +69,7 @@ func (e SchemaEntity) PrimaryKeysWhereClauseWithValues(values map[string]string)
 }
 
 func (e SchemaEntity) UpdateFields() string {
-	return e.UpdateFieldsParam(false, false, nil)
+	return e.UpdateFieldsParam(e.ForGolang, false, nil)
 }
 
 func (e SchemaEntity) UpdateFieldsParam(forGolang bool, onlyWithValue bool, values map[string]string) string {

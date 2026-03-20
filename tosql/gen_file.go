@@ -23,6 +23,7 @@ type GenerateRequest struct {
 	ExecutionUUID  string
 	ProjectVersion *nemgen.ProjectVersion
 	Configvalues   *ConfigValues
+	ForGolang      bool
 }
 
 type GenerateResponse struct {
@@ -54,7 +55,7 @@ func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, e
 				continue
 			}
 
-			entityTemplate, err := MapEntityToSchemaEntity(e, projectVersion, configvalues.DBType)
+			entityTemplate, err := MapEntityToSchemaEntity(e, projectVersion, configvalues.DBType, req.ForGolang)
 			if err != nil {
 				return nil, err
 			}

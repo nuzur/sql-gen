@@ -10,7 +10,7 @@ import (
 	"github.com/nuzur/sql-gen/db"
 )
 
-func MapEntityToSchemaEntity(e *nemgen.Entity, projectVersion *nemgen.ProjectVersion, dbType db.DBType) (SchemaEntity, error) {
+func MapEntityToSchemaEntity(e *nemgen.Entity, projectVersion *nemgen.ProjectVersion, dbType db.DBType, forGolang bool) (SchemaEntity, error) {
 	fields, indexes, constraints := MapEntityToTypes(e, projectVersion, dbType)
 	selects := ResolveSelectStatements(e, dbType)
 	primaryKeys := EntityPrimaryKeys(e)
@@ -24,6 +24,7 @@ func MapEntityToSchemaEntity(e *nemgen.Entity, projectVersion *nemgen.ProjectVer
 	}
 	return SchemaEntity{
 		DBType:           dbType,
+		ForGolang:        forGolang,
 		Name:             e.Identifier,
 		NameTitle:        strcase.ToCamel(e.Identifier),
 		PrimaryKeys:      primaryKeysIdentifiers,
