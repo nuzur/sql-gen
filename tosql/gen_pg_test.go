@@ -40,6 +40,7 @@ func TestGenPG(t *testing.T) {
 			},
 		},
 		ProjectVersion: projectVersion,
+		//ForGolang:      true,
 	}
 	res, err := GenerateSQL(context.Background(), req)
 	assert.NoError(t, err)

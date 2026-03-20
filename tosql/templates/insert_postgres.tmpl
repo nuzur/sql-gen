@@ -9,8 +9,8 @@ INSERT INTO "{{$entity.Name}}"
 )
 VALUES
 (
-    {{- range $field := $entity.Fields -}}
-        ?
+    {{- range $index, $field := $entity.Fields -}}
+        {{ if eq $entity.ForGolang true }}${{ inc $index }}{{ else }}?{{end}}
         {{- if eq $field.HasComma true}},{{end -}}
     {{- end -}}
 );

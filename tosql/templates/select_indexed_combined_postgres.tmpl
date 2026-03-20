@@ -10,11 +10,11 @@ SELECT {{ range $field := $entity.Fields -}}
             {{- if eq $field.HasComma true}},{{end -}}
         {{- end}}
 FROM "{{$entity.Name}}"
-WHERE 
+WHERE {{$selectIndex := 0}}
     {{range $field := $select.Fields -}} 
-    "{{- $field.Name}}" = ? {{ if ne $field.IsLast true }}AND {{ end -}}
+    "{{- $field.Name}}" = {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?{{end}} {{ if ne $field.IsLast true }}AND {{ end -}}
     {{- end}}{{- if eq $select.IsPrimary true }};{{- end}}
-{{ if eq $select.IsPrimary false -}}LIMIT ?, ?;{{- end}}        
+{{ if eq $select.IsPrimary false -}}LIMIT {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}, {{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?, ?{{end}};{{- end}}        
     {{ end }}
 
     {{- /* selects for update */ -}}
@@ -26,9 +26,9 @@ SELECT {{ range $field := $entity.Fields -}}
             {{- if eq $field.HasComma true}},{{end -}}
         {{- end}}
 FROM "{{$entity.Name}}"
-WHERE 
+WHERE {{$selectIndex := 0}}
     {{range $field := $select.Fields -}} 
-    "{{- $field.Name}}" = ? {{ if ne $field.IsLast true}}AND {{ end -}} 
+    "{{- $field.Name}}" = {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?{{end}} {{ if ne $field.IsLast true}}AND {{ end -}} 
     {{- end}}
 FOR UPDATE;
         {{ end -}}
@@ -43,12 +43,12 @@ SELECT {{ range $field := $entity.Fields -}}
             {{- if eq $field.HasComma true}},{{end -}}
         {{- end}}
 FROM "{{$entity.Name}}"
-WHERE 
+WHERE {{$selectIndex := 0}}
     {{range $field := $select.Fields -}} 
-    "{{- $field.Name}}" = ? {{ if ne $field.IsLast true}}AND {{ end -}} 
+    "{{- $field.Name}}" = {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?{{end}} {{ if ne $field.IsLast true}}AND {{ end -}} 
     {{- end}} 
 ORDER BY {{$timeField.Name}} ASC
-LIMIT ?, ?;
+LIMIT {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}, {{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?, ?{{end}};
 
 -- name: Fetch{{$select.Name}}OrderedBy{{$timeField.NameTitle}}DESC :many
 SELECT {{ range $field := $entity.Fields -}}
@@ -56,12 +56,12 @@ SELECT {{ range $field := $entity.Fields -}}
             {{- if eq $field.HasComma true}},{{end -}}
         {{- end}}
 FROM "{{$entity.Name}}"
-WHERE 
+WHERE {{$selectIndex := 0}}
     {{range $field := $select.Fields -}}
-    "{{- $field.Name}}" = ? {{ if ne $field.IsLast true }}AND {{ end -}} 
+    "{{- $field.Name}}" = {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?{{end}} {{ if ne $field.IsLast true }}AND {{ end -}} 
     {{- end}} 
 ORDER BY {{$timeField.Name}} DESC
-LIMIT ?, ?;
+LIMIT {{ if eq $entity.ForGolang true }}{{$selectIndex = inc $selectIndex}}${{ $selectIndex }}, {{$selectIndex = inc $selectIndex}}${{ $selectIndex }}{{ else }}?, ?{{end}};
 
             {{ end -}}
         {{ end -}}
