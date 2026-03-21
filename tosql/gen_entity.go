@@ -160,7 +160,7 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 	}{
 		Entity:       entityTemplate,
 		UpdateFields: entityTemplate.UpdateFieldsParam(true, true, params.Values),
-		WhereClause:  entityTemplate.PrimaryKeysWhereClauseParam(true),
+		WhereClause:  entityTemplate.PrimaryKeysWhereClauseParam(true, true),
 	}); err != nil {
 		log.Println("error executing template - ", err)
 		return nil, err
@@ -248,7 +248,7 @@ func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDelet
 		WhereClause string
 	}{
 		Entity:      entityTemplate,
-		WhereClause: entityTemplate.PrimaryKeysWhereClauseParam(true),
+		WhereClause: entityTemplate.PrimaryKeysWhereClauseParam(true, false),
 	}); err != nil {
 		log.Println("error executing template - ", err)
 		return nil, err

@@ -4,6 +4,6 @@ UPDATE "{{$entity.Name}}"
 SET
 {{$entity.UpdateFields}}
 WHERE
-{{$entity.PrimaryKeysWhereClause}};
+{{$entity.PrimaryKeysWhereClauseForUpdate}};
 
 {{end -}}

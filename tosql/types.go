@@ -27,6 +27,16 @@ type SchemaEntity struct {
 	SelectStatements []SchemaSelectStatement
 }
 
+func (e SchemaEntity) NumOfNonePKFields() int {
+	count := 0
+	for _, f := range e.Fields {
+		if !e.IsPrimaryKey(f.Field.Identifier) {
+			count++
+		}
+	}
+	return count
+}
+
 func (e SchemaEntity) IsPrimaryKey(fieldIdentifier string) bool {
 	return slices.Contains(e.PrimaryKeys, fieldIdentifier)
 }
@@ -36,11 +46,19 @@ func (e SchemaEntity) PrimaryKeysIdentifiers() string {
 }
 
 func (e SchemaEntity) PrimaryKeysWhereClause() string {
-	return e.PrimaryKeysWhereClauseParam(e.ForGolang)
+	return e.PrimaryKeysWhereClauseParam(e.ForGolang, false)
 }
 
-func (e SchemaEntity) PrimaryKeysWhereClauseParam(forGolang bool) string {
+func (e SchemaEntity) PrimaryKeysWhereClauseForUpdate() string {
+	return e.PrimaryKeysWhereClauseParam(e.ForGolang, true)
+}
+
+func (e SchemaEntity) PrimaryKeysWhereClauseParam(forGolang bool, update bool) string {
 	keys := []string{}
+	offset := 0
+	if update {
+		offset = e.NumOfNonePKFields()
+	}
 	for _, pk := range e.PrimaryKeys {
 		// quotes already added to name
 		switch e.DBType {
@@ -48,7 +66,7 @@ func (e SchemaEntity) PrimaryKeysWhereClauseParam(forGolang bool) string {
 			keys = append(keys, fmt.Sprintf("%s = ?", pk))
 		case db.PGDBType:
 			if forGolang {
-				keys = append(keys, fmt.Sprintf("%s = $%d", pk, len(keys)+1))
+				keys = append(keys, fmt.Sprintf("%s = $%d", pk, len(keys)+1+offset))
 			} else {
 				keys = append(keys, fmt.Sprintf("%s = ?", pk))
 			}
