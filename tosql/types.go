@@ -57,7 +57,7 @@ func (e SchemaEntity) PrimaryKeysWhereClauseParam(forGolang bool, update bool) s
 	keys := []string{}
 	offset := 0
 	if update {
-		offset = e.NumOfNonePKFields()
+		offset = e.NumOfNonePKFields() - 1
 	}
 	for _, pk := range e.PrimaryKeys {
 		// quotes already added to name
