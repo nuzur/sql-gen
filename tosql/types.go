@@ -116,11 +116,20 @@ func (e SchemaEntity) UpdateFieldsWithValues(values map[string]string) string {
 	for _, f := range e.Fields {
 		if !f.Field.Key {
 			if value, ok := values[f.Field.Uuid]; ok {
-				switch e.DBType {
-				case db.MYSQLDBType:
-					fields = append(fields, fmt.Sprintf("`%s` = '%s'", f.Name, EscapeValue(value)))
-				case db.PGDBType:
-					fields = append(fields, fmt.Sprintf(`"%s" = '%s'`, f.Name, EscapeValue(value)))
+				if isJSONField(f.Field) && value == "" {
+					switch e.DBType {
+					case db.MYSQLDBType:
+						fields = append(fields, fmt.Sprintf("`%s` = NULL", f.Name))
+					case db.PGDBType:
+						fields = append(fields, fmt.Sprintf(`"%s" = NULL`, f.Name))
+					}
+				} else {
+					switch e.DBType {
+					case db.MYSQLDBType:
+						fields = append(fields, fmt.Sprintf("`%s` = '%s'", f.Name, EscapeValue(value)))
+					case db.PGDBType:
+						fields = append(fields, fmt.Sprintf(`"%s" = '%s'`, f.Name, EscapeValue(value)))
+					}
 				}
 			}
 		}

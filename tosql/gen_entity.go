@@ -42,7 +42,7 @@ func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInser
 		case db.PGDBType:
 			paramsPlaceholders[f.Field.Uuid] = fmt.Sprintf("$%d", len(paramsPlaceholders)+1)
 		}
-		if value, ok := params.Values[f.Field.Uuid]; ok {
+		if value, ok := params.Values[f.Field.Uuid]; ok && !(isJSONField(f.Field) && value == "") {
 			escapedValues[f.Field.Uuid] = fmt.Sprintf("'%s'", EscapeValue(value))
 			paramsValues = append(paramsValues, value)
 		} else {
