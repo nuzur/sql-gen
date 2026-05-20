@@ -92,17 +92,31 @@ func (e SchemaEntity) UpdateFields() string {
 
 func (e SchemaEntity) UpdateFieldsParam(forGolang bool, onlyWithValue bool, values map[string]string) string {
 	fields := []string{}
+	paramIndex := 0
 	for _, f := range e.Fields {
 		if !f.Field.Key {
-			if _, ok := values[f.Field.Uuid]; ok || !onlyWithValue {
-				switch e.DBType {
-				case db.MYSQLDBType:
-					fields = append(fields, fmt.Sprintf("`%s` = ?", f.Name))
-				case db.PGDBType:
-					if forGolang {
-						fields = append(fields, fmt.Sprintf(`"%s" = $%d`, f.Name, len(fields)+1))
-					} else {
-						fields = append(fields, fmt.Sprintf(`"%s" = ?`, f.Name))
+			value, ok := values[f.Field.Uuid]
+			if ok || !onlyWithValue {
+				// JSON fields with empty value are emitted as NULL literals so
+				// the DB driver never receives an invalid JSON string parameter.
+				if isJSONField(f.Field) && value == "" {
+					switch e.DBType {
+					case db.MYSQLDBType:
+						fields = append(fields, fmt.Sprintf("`%s` = NULL", f.Name))
+					case db.PGDBType:
+						fields = append(fields, fmt.Sprintf(`"%s" = NULL`, f.Name))
+					}
+				} else {
+					paramIndex++
+					switch e.DBType {
+					case db.MYSQLDBType:
+						fields = append(fields, fmt.Sprintf("`%s` = ?", f.Name))
+					case db.PGDBType:
+						if forGolang {
+							fields = append(fields, fmt.Sprintf(`"%s" = $%d`, f.Name, paramIndex))
+						} else {
+							fields = append(fields, fmt.Sprintf(`"%s" = ?`, f.Name))
+						}
 					}
 				}
 			}

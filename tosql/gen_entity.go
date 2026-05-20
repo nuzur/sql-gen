@@ -31,23 +31,31 @@ func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInser
 		return nil, err
 	}
 
-	// go through values and add quotes and escape
+	// go through values and add quotes and escape.
+	// Fields that are absent from Values, or are a JSON type with an empty
+	// value, are treated as SQL NULL. For the parametrized SQL we emit the
+	// NULL keyword directly (no placeholder) so the DB driver never receives
+	// the string "NULL" as a bound parameter value.
 	escapedValues := make(map[string]string)
 	paramsPlaceholders := make(map[string]string)
 	paramsValues := []string{}
+	paramIndex := 0
 	for _, f := range entityTemplate.Fields {
-		switch params.DBType {
-		case db.MYSQLDBType:
-			paramsPlaceholders[f.Field.Uuid] = "?"
-		case db.PGDBType:
-			paramsPlaceholders[f.Field.Uuid] = fmt.Sprintf("$%d", len(paramsPlaceholders)+1)
-		}
-		if value, ok := params.Values[f.Field.Uuid]; ok && !(isJSONField(f.Field) && value == "") {
-			escapedValues[f.Field.Uuid] = fmt.Sprintf("'%s'", EscapeValue(value))
-			paramsValues = append(paramsValues, value)
-		} else {
+		value, ok := params.Values[f.Field.Uuid]
+		isNull := !ok || (isJSONField(f.Field) && value == "")
+		if isNull {
 			escapedValues[f.Field.Uuid] = "NULL"
-			paramsValues = append(paramsValues, "NULL")
+			paramsPlaceholders[f.Field.Uuid] = "NULL"
+		} else {
+			escapedValues[f.Field.Uuid] = fmt.Sprintf("'%s'", EscapeValue(value))
+			paramIndex++
+			switch params.DBType {
+			case db.MYSQLDBType:
+				paramsPlaceholders[f.Field.Uuid] = "?"
+			case db.PGDBType:
+				paramsPlaceholders[f.Field.Uuid] = fmt.Sprintf("$%d", paramIndex)
+			}
+			paramsValues = append(paramsValues, value)
 		}
 	}
 
@@ -171,6 +179,11 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 	for _, f := range entityTemplate.Fields {
 		if !f.Field.Key {
 			if value, ok := params.Values[f.Field.Uuid]; ok {
+				// JSON fields with empty value are emitted as NULL literals in
+				// the parametrized SQL, so they must not be added as bound params.
+				if isJSONField(f.Field) && value == "" {
+					continue
+				}
 				paramValues = append(paramValues, value)
 			}
 		}
