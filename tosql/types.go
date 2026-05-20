@@ -97,9 +97,11 @@ func (e SchemaEntity) UpdateFieldsParam(forGolang bool, onlyWithValue bool, valu
 		if !f.Field.Key {
 			value, ok := values[f.Field.Uuid]
 			if ok || !onlyWithValue {
-				// JSON fields with empty value are emitted as NULL literals so
-				// the DB driver never receives an invalid JSON string parameter.
-				if isJSONField(f.Field) && value == "" {
+				// Only treat as NULL when the value was explicitly provided and is
+				// empty for a JSON column. When ok is false we're in generic template
+				// generation (onlyWithValue=false, no values map) and must use a
+				// placeholder so the generated template is reusable.
+				if ok && isJSONField(f.Field) && value == "" {
 					switch e.DBType {
 					case db.MYSQLDBType:
 						fields = append(fields, fmt.Sprintf("`%s` = NULL", f.Name))
