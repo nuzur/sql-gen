@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"text/template"
+	"time"
 
 	nemgen "github.com/nuzur/nem/idl/gen"
 	"github.com/nuzur/sql-gen/db"
@@ -286,10 +287,11 @@ func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDelet
 
 // coerceParamValue normalizes a stringified field value into the form the SQL
 // driver expects for that column type. It exists because the upstream UI
-// serializes values as strings (e.g. "true"/"false" for booleans) and mysql
-// in strict mode rejects "false" for TINYINT(1). Only the cases we've
-// actually seen blow up in practice are covered; everything else passes
-// through unchanged.
+// serializes values as strings (e.g. "true"/"false" for booleans, ISO 8601
+// for datetimes) and mysql in strict mode rejects formats it considers
+// non-canonical. Postgres is largely tolerant and gets left alone here.
+// Only the cases we've actually seen blow up in practice are covered;
+// everything else passes through unchanged.
 func coerceParamValue(field *nemgen.Field, value string, dbType db.DBType) string {
 	if field == nil {
 		return value
@@ -316,8 +318,50 @@ func coerceParamValue(field *nemgen.Field, value string, dbType db.DBType) strin
 				return "0"
 			}
 		}
+	case nemgen.FieldType_FIELD_TYPE_DATE:
+		if dbType == db.MYSQLDBType {
+			if t, ok := parseISOTime(value); ok {
+				return t.UTC().Format("2006-01-02")
+			}
+		}
+	case nemgen.FieldType_FIELD_TYPE_DATETIME:
+		if dbType == db.MYSQLDBType {
+			if t, ok := parseISOTime(value); ok {
+				// mysql DATETIME wants `YYYY-MM-DD HH:MM:SS[.ffffff]`. The
+				// upstream UI sends RFC3339 with `T` and a `Z` suffix, which
+				// strict-mode mysql refuses (error 1292). Reformat in UTC.
+				return t.UTC().Format("2006-01-02 15:04:05.999999")
+			}
+		}
+	case nemgen.FieldType_FIELD_TYPE_TIME:
+		if dbType == db.MYSQLDBType {
+			if t, ok := parseISOTime(value); ok {
+				return t.UTC().Format("15:04:05.999999")
+			}
+		}
 	}
 	return value
+}
+
+// parseISOTime tolerates the handful of ISO-ish formats the UI may emit:
+// RFC3339 with fractional seconds (`...Z`), RFC3339 without fractional
+// seconds, and the mysql-native `YYYY-MM-DD HH:MM:SS` form (left alone).
+// Returns false when the value isn't recognized so the caller passes it
+// through untouched.
+func parseISOTime(value string) (time.Time, bool) {
+	if t, err := time.Parse(time.RFC3339Nano, value); err == nil {
+		return t, true
+	}
+	if t, err := time.Parse(time.RFC3339, value); err == nil {
+		return t, true
+	}
+	if t, err := time.Parse("2006-01-02T15:04:05.999999999", value); err == nil {
+		return t, true
+	}
+	if t, err := time.Parse("2006-01-02T15:04:05", value); err == nil {
+		return t, true
+	}
+	return time.Time{}, false
 }
 
 func EscapeValue(sql string) string {
