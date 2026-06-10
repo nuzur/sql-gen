@@ -218,7 +218,7 @@ func (rt *sqlremote) buildIndexesFromMysql(tableName string, fields []*nemgen.Fi
 		WHERE
 			0 = 0 AND s.TABLE_SCHEMA = '%s'
 				AND s.table_name = '%s'
-		ORDER BY kcu.ORDINAL_POSITION`,
+		ORDER BY s.INDEX_NAME, s.SEQ_IN_INDEX`,
 		rt.userConnection.DbSchema,
 		tableName)
 
