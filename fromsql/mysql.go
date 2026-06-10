@@ -41,6 +41,18 @@ type mysqlForeignKeyDetails struct {
 }
 
 func (rt *sqlremote) buildProjectVersionFromMysql() (*nemgen.ProjectVersion, error) {
+	if rt.userConnection.DbSchema == "" {
+		res, err := rt.db.QueryMaps("SELECT DATABASE()")
+		if err == nil && len(res) > 0 {
+			for _, v := range res[0] {
+				if str, ok := v.(string); ok {
+					rt.userConnection.DbSchema = str
+					break
+				}
+			}
+		}
+	}
+
 	tableNames, err := rt.getTableNames()
 	if err != nil {
 		return nil, err
