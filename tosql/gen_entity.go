@@ -47,6 +47,7 @@ func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInser
 			escapedValues[f.Field.Uuid] = "NULL"
 			paramsPlaceholders[f.Field.Uuid] = "NULL"
 		} else {
+			value = coerceParamValue(f.Field, value, params.DBType)
 			escapedValues[f.Field.Uuid] = fmt.Sprintf("'%s'", EscapeValue(value))
 			paramIndex++
 			switch params.DBType {
@@ -184,14 +185,14 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 				if isJSONField(f.Field) && value == "" {
 					continue
 				}
-				paramValues = append(paramValues, value)
+				paramValues = append(paramValues, coerceParamValue(f.Field, value, params.DBType))
 			}
 		}
 	}
 	for _, f := range entityTemplate.Fields {
 		if f.Field.Key {
 			if value, ok := params.Keys[f.Field.Uuid]; ok {
-				paramValues = append(paramValues, value)
+				paramValues = append(paramValues, coerceParamValue(f.Field, value, params.DBType))
 			}
 		}
 	}
@@ -272,7 +273,7 @@ func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDelet
 	for _, f := range entityTemplate.Fields {
 		if f.Field.Key {
 			if value, ok := params.Keys[f.Field.Uuid]; ok {
-				paramValues = append(paramValues, value)
+				paramValues = append(paramValues, coerceParamValue(f.Field, value, params.DBType))
 			}
 		}
 	}
@@ -281,6 +282,42 @@ func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDelet
 		ParametrizedSQL: parametrizedSQL,
 		Params:          paramValues,
 	}, nil
+}
+
+// coerceParamValue normalizes a stringified field value into the form the SQL
+// driver expects for that column type. It exists because the upstream UI
+// serializes values as strings (e.g. "true"/"false" for booleans) and mysql
+// in strict mode rejects "false" for TINYINT(1). Only the cases we've
+// actually seen blow up in practice are covered; everything else passes
+// through unchanged.
+func coerceParamValue(field *nemgen.Field, value string, dbType db.DBType) string {
+	if field == nil {
+		return value
+	}
+	switch field.GetType() {
+	case nemgen.FieldType_FIELD_TYPE_BOOLEAN:
+		// Both mysql (TINYINT(1)) and pg (BOOLEAN) accept "0"/"1"; mysql in
+		// strict mode rejects "true"/"false" string literals. Normalize.
+		switch value {
+		case "true", "TRUE", "True":
+			return "1"
+		case "false", "FALSE", "False":
+			return "0"
+		}
+	case nemgen.FieldType_FIELD_TYPE_INTEGER:
+		// 1-bit INTEGER maps to TINYINT(1) on mysql and BOOLEAN on pg — same
+		// shape as a boolean field as far as accepted literals go.
+		if field.GetTypeConfig() != nil && field.GetTypeConfig().GetInteger() != nil &&
+			field.GetTypeConfig().GetInteger().GetSize() == nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_ONE_BIT {
+			switch value {
+			case "true", "TRUE", "True":
+				return "1"
+			case "false", "FALSE", "False":
+				return "0"
+			}
+		}
+	}
+	return value
 }
 
 func EscapeValue(sql string) string {
