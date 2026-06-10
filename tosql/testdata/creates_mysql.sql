@@ -9,11 +9,11 @@ CREATE TABLE IF NOT EXISTS `user` (
     `created_by` CHAR(36) NOT NULL,
     `updated_by` CHAR(36) NOT NULL,
     PRIMARY KEY (`uuid`, `version`),
-    INDEX `index_email` (`email` ASC),
-    INDEX `index_status` (`status` ASC),
-    INDEX `index_updated_at` (`updated_at` ASC),
-    UNIQUE INDEX `unique_uuid` (`uuid` ASC),
-    UNIQUE INDEX `unique_email` (`email` ASC)
+    INDEX `index_email` (`email`),
+    INDEX `index_status` (`status`),
+    INDEX `index_updated_at` (`updated_at`),
+    UNIQUE INDEX `unique_uuid` (`uuid`),
+    UNIQUE INDEX `unique_email` (`email`)
 ) ENGINE = InnoDB;
 
 CREATE TABLE IF NOT EXISTS `folder` (
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS `single_key` (
     `created_by` CHAR(36) NOT NULL,
     `updated_by` CHAR(36) NOT NULL,
     PRIMARY KEY (`uuid`),
-    INDEX `nuevo_indice` (`version` ASC)
+    INDEX `nuevo_indice` (`version`)
 ) ENGINE = InnoDB;
 
 CREATE TABLE IF NOT EXISTS `post` (
@@ -53,8 +53,8 @@ CREATE TABLE IF NOT EXISTS `post` (
     `media` JSON NOT NULL,
     `user_uuid` CHAR(36) NOT NULL,
     PRIMARY KEY (`uuid`),
-    INDEX `nuevo_indice` (`slug` ASC),
-    UNIQUE INDEX `unique_slug` (`slug` ASC),
+    INDEX `nuevo_indice` (`slug`),
+    UNIQUE INDEX `unique_slug` (`slug`),
     CONSTRAINT `post_user`
         FOREIGN KEY (`user_uuid`)
         REFERENCES `user` (`uuid`)

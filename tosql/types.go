@@ -198,16 +198,18 @@ func (i SchemaIndex) FieldNamesIdentifiers() string {
 	for _, f := range fields {
 
 		if i.DBType == db.MYSQLDBType {
-			order := ""
-			if f.Order == nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_ASC {
-				order = "ASC"
-			} else if f.Order == nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_DESC {
-				order = "DESC"
+			orderStr := ""
+			if f.Order == nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_DESC {
+				orderStr = " DESC"
 			}
 			if f.Length > 0 {
-				fieldsStr = append(fieldsStr, fmt.Sprintf("`%s`(%d) %s", i.FieldNames[f.FieldUuid], f.Length, order))
+				fieldsStr = append(fieldsStr, fmt.Sprintf("`%s`(%d)%s", i.FieldNames[f.FieldUuid], f.Length, orderStr))
 			} else {
-				fieldsStr = append(fieldsStr, fmt.Sprintf("`%s` %s", i.FieldNames[f.FieldUuid], order))
+				if orderStr != "" {
+					fieldsStr = append(fieldsStr, fmt.Sprintf("`%s` %s", i.FieldNames[f.FieldUuid], strings.TrimSpace(orderStr)))
+				} else {
+					fieldsStr = append(fieldsStr, fmt.Sprintf("`%s`", i.FieldNames[f.FieldUuid]))
+				}
 			}
 		} else if i.DBType == db.PGDBType {
 			if f.Length > 0 {
