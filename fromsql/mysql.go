@@ -116,7 +116,7 @@ func (rt *sqlremote) buildRelationshipsFromMysql(tableName string, entities []*n
 	)
 
 	var fkDetails []*mysqlForeignKeyDetails = []*mysqlForeignKeyDetails{}
-	err := rt.sqlConnection.Select(&fkDetails, foreignKeysQuery)
+	err := rt.db.Select(&fkDetails, foreignKeysQuery)
 	if err != nil {
 		return nil, fmt.Errorf("error getting constraint details: %v", err)
 	}
@@ -177,7 +177,7 @@ func (rt *sqlremote) buildFieldsFromMysql(tableName string) ([]*nemgen.Field, er
 	)
 
 	var columnsDetails []*mysqlColumnDetails = []*mysqlColumnDetails{}
-	err := rt.sqlConnection.Select(&columnsDetails, columnsQuery)
+	err := rt.db.Select(&columnsDetails, columnsQuery)
 	if err != nil {
 		return nil, fmt.Errorf("error getting columns: %v", err)
 	}
@@ -223,7 +223,7 @@ func (rt *sqlremote) buildIndexesFromMysql(tableName string, fields []*nemgen.Fi
 		tableName)
 
 	var indexesDetails []*mysqlIndexDetails = []*mysqlIndexDetails{}
-	err := rt.sqlConnection.Select(&indexesDetails, indexesQuery)
+	err := rt.db.Select(&indexesDetails, indexesQuery)
 	if err != nil {
 		return nil, fmt.Errorf("error getting indexes: %v", err)
 	}

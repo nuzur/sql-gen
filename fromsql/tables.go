@@ -9,7 +9,7 @@ import (
 func New(params GenerateRequest) *sqlremote {
 	return &sqlremote{
 		userConnection: params.UserConnection,
-		sqlConnection:  params.SQLConnection,
+		db:             params.DB,
 		dbType:         params.DBType,
 		version:        params.Version,
 	}
@@ -25,7 +25,7 @@ func (rt *sqlremote) getTableNames() ([]string, error) {
 	}
 
 	data := []string{}
-	err := rt.sqlConnection.Select(&data, query)
+	err := rt.db.Select(&data, query)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting table names: %v", err)

@@ -114,7 +114,7 @@ func (rt *sqlremote) buildRelationshipsFromPg(tableName string, entities []*nemg
 	)
 
 	var fkDetails []*pgForeignKeyDetails = []*pgForeignKeyDetails{}
-	err := rt.sqlConnection.Select(&fkDetails, foreignKeysQuery)
+	err := rt.db.Select(&fkDetails, foreignKeysQuery)
 	if err != nil {
 		return nil, fmt.Errorf("error getting constraint details: %v", err)
 	}
@@ -182,7 +182,7 @@ func (rt *sqlremote) buildFieldsFromPg(tableName string, indexDetails []*pgIndex
 	}
 
 	var columnsDetails []*pgColumnDetails = []*pgColumnDetails{}
-	err = rt.sqlConnection.Select(&columnsDetails, columnsQuery)
+	err = rt.db.Select(&columnsDetails, columnsQuery)
 	if err != nil {
 		return nil, fmt.Errorf("error getting columns: %v", err)
 	}
@@ -222,7 +222,7 @@ func (rt *sqlremote) fetchPgIndexDetails(tableName string) ([]*pgIndexDetails, e
 		tableName)
 
 	var indexesDetails []*pgIndexDetails = []*pgIndexDetails{}
-	err := rt.sqlConnection.Select(&indexesDetails, indexesQuery)
+	err := rt.db.Select(&indexesDetails, indexesQuery)
 	if err != nil {
 		return nil, fmt.Errorf("error getting indexes: %v", err)
 	}

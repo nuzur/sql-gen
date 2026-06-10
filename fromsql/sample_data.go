@@ -15,18 +15,9 @@ func (rt *sqlremote) sampleTableValues(name string) (remoteRows, error) {
 		query = fmt.Sprintf(`SELECT * FROM "%s" ORDER BY RANDOM() LIMIT 10`, name)
 	}
 
-	rows, err := rt.sqlConnection.Queryx(query)
+	data, err := rt.db.QueryMaps(query)
 	if err != nil {
 		return nil, fmt.Errorf("error getting sample data: %v | query:  %v", err, query)
-	}
-	data := []map[string]interface{}{}
-	for rows.Next() {
-		r := make(map[string]interface{})
-		err := rows.MapScan(r)
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, r)
 	}
 	return data, nil
 }
