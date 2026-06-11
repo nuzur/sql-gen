@@ -10,9 +10,9 @@ func (rt *sqlremote) sampleTableValues(name string) (remoteRows, error) {
 	// Get Data
 	query := ""
 	if rt.dbType == db.MYSQLDBType {
-		query = fmt.Sprintf("SELECT * FROM `%s` ORDER BY RAND() LIMIT 10", name)
+		query = fmt.Sprintf("SELECT * FROM `%s` LIMIT 10", name)
 	} else if rt.dbType == db.PGDBType {
-		query = fmt.Sprintf(`SELECT * FROM "%s" ORDER BY RANDOM() LIMIT 10`, name)
+		query = fmt.Sprintf(`SELECT * FROM "%s" LIMIT 10`, name)
 	}
 
 	data, err := rt.db.QueryMaps(query)
