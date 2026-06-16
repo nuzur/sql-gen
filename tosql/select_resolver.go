@@ -88,7 +88,18 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 	}
 
 	// combine all indexes
-	combinations := Combinations(indexIds)
+	//
+	// Combinations is the power set of the index set: 2^N - 1 subsets. For an
+	// entity with many indexes this explodes (20 indexes ≈ 1M subsets), and each
+	// subset allocates a SchemaSelectStatement — enough to OOM the process. Above
+	// maxPowerSetIndexes we fall back to one select per individual index, which
+	// is linear. Entities at or below the threshold keep the full behavior.
+	var combinations [][]string
+	if len(indexIds) > maxPowerSetIndexes {
+		combinations = singleIndexSubsets(indexIds)
+	} else {
+		combinations = Combinations(indexIds)
+	}
 	for _, combination := range combinations {
 		name := fmt.Sprintf("%sBy", strcase.ToCamel(e.Identifier))
 		fields := map[string]SchemaSelectStatementField{}
@@ -151,6 +162,23 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 	}
 
 	return selects
+}
+
+// maxPowerSetIndexes is the largest index count for which ResolveSelectStatements
+// computes the full power set of index combinations. 2^8 = 256 subsets is a
+// safe upper bound on the work/memory per entity; above it we degrade to one
+// select per index to avoid a combinatorial memory blowup.
+const maxPowerSetIndexes = 8
+
+// singleIndexSubsets returns one single-element subset per index, matching the
+// shape Combinations returns so the caller's loop is unchanged. Used as the
+// bounded fallback for entities with many indexes.
+func singleIndexSubsets(set []string) [][]string {
+	subsets := make([][]string, 0, len(set))
+	for _, s := range set {
+		subsets = append(subsets, []string{s})
+	}
+	return subsets
 }
 
 func Combinations(set []string) (subsets [][]string) {
