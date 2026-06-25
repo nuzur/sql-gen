@@ -224,6 +224,41 @@ func mapIndexes(e *nemgen.Entity, dbType db.DBType, fieldIdentifers map[string]s
 			})
 		}
 	}
+
+	// key:true fields model the primary key, but the generator only emits a
+	// PRIMARY KEY(...) for an index of type primary. When the schema defines no
+	// explicit primary index, synthesize one from the key fields — otherwise the
+	// table is created without a primary key and any foreign key referencing it
+	// fails with "missing index in referenced table".
+	hasPrimary := false
+	for _, idx := range indexes {
+		if idx.Type == "primary" {
+			hasPrimary = true
+			break
+		}
+	}
+	if !hasPrimary {
+		if pkFields := EntityPrimaryKeys(e); len(pkFields) > 0 {
+			fieldNames := make(map[string]string)
+			idxFields := make([]*nemgen.IndexField, 0, len(pkFields))
+			for n, f := range pkFields {
+				fieldNames[f.Uuid] = f.Identifier
+				idxFields = append(idxFields, &nemgen.IndexField{
+					FieldUuid: f.Uuid,
+					Priority:  int64(n),
+				})
+			}
+			indexes = append([]SchemaIndex{{
+				DBType:     dbType,
+				Name:       "primary",
+				Index:      &nemgen.Index{Type: nemgen.IndexType_INDEX_TYPE_PRIMARY, Fields: idxFields},
+				FieldNames: fieldNames,
+				Type:       "primary",
+				TypeSort:   0,
+			}}, indexes...)
+		}
+	}
+
 	return indexes
 }
 
