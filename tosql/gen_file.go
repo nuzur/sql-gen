@@ -79,6 +79,8 @@ func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, e
 		}
 	}
 
+	deduplicateConstraintNames(entities)
+
 	tpl := SchemaTemplate{
 		Entities: entities,
 	}
@@ -124,6 +126,34 @@ type GenerateFileRequest struct {
 	Data          SchemaTemplate
 	ActionResults *[]ActionResult
 	Action        Action
+}
+
+// deduplicateConstraintNames disambiguates FK constraint names that collide across
+// entities. Constraint names come from relationship.Identifier, which is only
+// normally unique - legacy schemas can carry relationships that share an
+// identifier (e.g. two FKs from "episode" to "drag"). Postgres requires constraint
+// names to be unique per table and MySQL requires them unique per database, so any
+// collision here would make the generated DDL invalid.
+//
+// Colliding names are suffixed with the owning relationship's own uuid rather than
+// a position-dependent counter: the suffix must stay identical across
+// regenerations of the same schema, or pg-schema-diff would see it as an unrelated
+// constraint and emit a spurious drop+recreate.
+func deduplicateConstraintNames(entities []SchemaEntity) {
+	occurances := make(map[string]int)
+	for i := range entities {
+		for j := range entities[i].Constraints {
+			occurances[entities[i].Constraints[j].Name]++
+		}
+	}
+	for i := range entities {
+		for j := range entities[i].Constraints {
+			constraint := &entities[i].Constraints[j]
+			if occurances[constraint.Name] > 1 && constraint.Relationship != nil && len(constraint.Relationship.Uuid) >= 8 {
+				constraint.Name = fmt.Sprintf("%s_%s", constraint.Name, constraint.Relationship.Uuid[:8])
+			}
+		}
+	}
 }
 
 func GenerateFile(ctx context.Context, req *GenerateFileRequest) error {
