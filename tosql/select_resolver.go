@@ -21,11 +21,11 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 	if len(primaryKeys) > 0 {
 		primaryIdentifiers := []string{}
 		for _, pk := range primaryKeys {
-			primaryIdentifiers = append(primaryIdentifiers, strcase.ToCamel(pk.Identifier))
+			primaryIdentifiers = append(primaryIdentifiers, ToCamelCase(pk.Identifier))
 		}
 		finalPKName := strings.Join(primaryIdentifiers, "And")
 
-		nameByID := fmt.Sprintf("%sBy%s", strcase.ToCamel(e.Identifier), finalPKName)
+		nameByID := fmt.Sprintf("%sBy%s", ToCamelCase(e.Identifier), finalPKName)
 		selects = append(selects, SchemaSelectStatement{
 			Name:             nameByID,
 			Identifier:       strcase.ToSnake(nameByID),
@@ -101,7 +101,7 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 		combinations = Combinations(indexIds)
 	}
 	for _, combination := range combinations {
-		name := fmt.Sprintf("%sBy", strcase.ToCamel(e.Identifier))
+		name := fmt.Sprintf("%sBy", ToCamelCase(e.Identifier))
 		fields := map[string]SchemaSelectStatementField{}
 		first := true
 
@@ -123,9 +123,9 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 						}
 						if first {
 							first = false
-							name = fmt.Sprintf("%s%s", name, strcase.ToCamel(field.Identifier))
+							name = fmt.Sprintf("%s%s", name, ToCamelCase(field.Identifier))
 						} else {
-							name = fmt.Sprintf("%sAnd%s", name, strcase.ToCamel(field.Identifier))
+							name = fmt.Sprintf("%sAnd%s", name, ToCamelCase(field.Identifier))
 						}
 					}
 				}
