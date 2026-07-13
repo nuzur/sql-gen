@@ -100,6 +100,7 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 	} else {
 		combinations = Combinations(indexIds)
 	}
+	seenNames := map[string]bool{}
 	for _, combination := range combinations {
 		name := fmt.Sprintf("%sBy", ToCamelCase(e.Identifier))
 		fields := map[string]SchemaSelectStatementField{}
@@ -114,6 +115,12 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 				_, exists := fields[indexField.FieldUuid]
 				if !exists {
 					field := fieldMap[indexField.FieldUuid]
+					if field != nil && (field.Type == nemgen.FieldType_FIELD_TYPE_DATETIME || field.Type == nemgen.FieldType_FIELD_TYPE_DATE) {
+						// datetime/date fields inside composite indexes are excluded from
+						// the WHERE clause, matching go-code-gen's module select resolver
+						// (which names its fetch methods without them)
+						continue
+					}
 					mappedField := mapField(field, dbType)
 					if mappedField != nil {
 						fields[indexField.FieldUuid] = SchemaSelectStatementField{
@@ -141,9 +148,15 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 			return strings.Compare(finalFields[i].Name, finalFields[j].Name) < 0
 		})
 
-		if len(finalFields) > 0 {
-			finalFields[len(finalFields)-1].IsLast = true
+		// an index whose fields were all excluded (datetime/date) contributes no
+		// WHERE clause; emitting it would produce an invalid, unnamed select. Two
+		// indexes can also collapse to the same field set after the exclusion —
+		// only the first emission survives (sqlc rejects duplicate query names).
+		if len(finalFields) == 0 || seenNames[name] {
+			continue
 		}
+		seenNames[name] = true
+		finalFields[len(finalFields)-1].IsLast = true
 
 		sortSupported := false
 		if len(timeFields) > 0 {
