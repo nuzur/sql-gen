@@ -439,10 +439,14 @@ func mapPgIndexDetailsToIndex(in []*pgIndexDetails, fields []*nemgen.Field) *nem
 
 	finalIndexFields := []*nemgen.IndexField{}
 	for _, id := range in {
+		order := nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_ASC
+		if !id.Ascending {
+			order = nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_DESC
+		}
 		finalIndexFields = append(finalIndexFields, &nemgen.IndexField{
 			FieldUuid: indexFields[id.ColumnName].Uuid,
 			Priority:  id.Seq,
-			Order:     nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_DESC,
+			Order:     order,
 		})
 	}
 

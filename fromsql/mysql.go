@@ -1,6 +1,7 @@
 package fromsql
 
 import (
+	"database/sql"
 	"fmt"
 	"slices"
 	"strings"
@@ -31,6 +32,8 @@ type mysqlIndexDetails struct {
 	NonUnique      bool   `db:"NON_UNIQUE"`
 	ColumnName     string `db:"COLUMN_NAME"`
 	ConstraintType string `db:"CONSTRAINT_TYPE"`
+	// Collation is 'A' (ascending), 'D' (descending) or NULL (not sorted).
+	Collation sql.NullString `db:"COLLATION"`
 }
 
 type mysqlForeignKeyDetails struct {
@@ -216,6 +219,7 @@ func (rt *sqlremote) buildIndexesFromMysql(tableName string, fields []*nemgen.Fi
 			s.SEQ_IN_INDEX,
 			s.NON_UNIQUE,
 			s.COLUMN_NAME,
+			s.COLLATION,
 			IFNULL(t.CONSTRAINT_TYPE, "INDEX") as CONSTRAINT_TYPE
 		FROM
 			INFORMATION_SCHEMA.STATISTICS s
@@ -496,10 +500,14 @@ func mapMysqlIndexDetailsToIndex(in []*mysqlIndexDetails, fields []*nemgen.Field
 		if indexFields[id.ColumnName].Type == nemgen.FieldType_FIELD_TYPE_TEXT {
 			length = 255
 		}
+		order := nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_ASC
+		if id.Collation.Valid && id.Collation.String == "D" {
+			order = nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_DESC
+		}
 		finalIndexFields = append(finalIndexFields, &nemgen.IndexField{
 			FieldUuid: indexFields[id.ColumnName].Uuid,
 			Priority:  id.Seq,
-			Order:     nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_ASC,
+			Order:     order,
 			Length:    length,
 		})
 	}
