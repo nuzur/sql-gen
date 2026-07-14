@@ -9,7 +9,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/nuzur/extension-sdk v0.0.57
 	github.com/nuzur/filetools v0.0.3
-	github.com/nuzur/nem v1.1.6
+	github.com/nuzur/nem v1.1.7
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sync v0.20.0
 )
