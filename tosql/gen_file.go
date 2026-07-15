@@ -64,19 +64,9 @@ func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, e
 	}
 
 	if configvalues.DBType == db.PGDBType {
-		// for pg we want to make sure all index names are unique
-		indexOccurances := make(map[string]int)
-		for i := range entities {
-			for j := range entities[i].Indexes {
-				indexName := entities[i].Indexes[j].Name
-				if _, ok := indexOccurances[indexName]; ok {
-					indexOccurances[indexName]++
-					entities[i].Indexes[j].Name = fmt.Sprintf("%s_%d", indexName, indexOccurances[indexName])
-				} else {
-					indexOccurances[indexName] = 1
-				}
-			}
-		}
+		// Postgres index names must be unique per schema (MySQL scopes them per
+		// table, so it needs no disambiguation).
+		deduplicateIndexNames(entities)
 	}
 
 	deduplicateConstraintNames(entities)
@@ -139,6 +129,39 @@ type GenerateFileRequest struct {
 // a position-dependent counter: the suffix must stay identical across
 // regenerations of the same schema, or pg-schema-diff would see it as an unrelated
 // constraint and emit a spurious drop+recreate.
+// deduplicateIndexNames disambiguates index names that collide across entities.
+// nem index names are only unique per entity — every table carries a "created_at",
+// "updated_at", and "status" index, plus per-FK indexes like "season_id" — but
+// Postgres requires index names to be unique per schema. Left alone, one
+// CREATE INDEX would collide with another.
+//
+// Colliding names are suffixed with the owning table name rather than a
+// position-dependent counter. The suffix must stay identical across regenerations
+// of the same schema: a counter over the (unordered) entities slice assigns the
+// same name (e.g. "created_at_5") to a different physical index from run to run,
+// so pg-schema-diff sees every index under a new name each time and emits a
+// spurious rename → recreate → drop churn. The table name makes the result a pure
+// function of (table, index) — deterministic regardless of slice order or of
+// other entities being added/removed — and stays unique because index names are
+// already unique within a table. (The index's own uuid is NOT a safe key: legacy
+// models can carry two distinct indexes sharing a uuid.)
+func deduplicateIndexNames(entities []SchemaEntity) {
+	occurances := make(map[string]int)
+	for i := range entities {
+		for j := range entities[i].Indexes {
+			occurances[entities[i].Indexes[j].Name]++
+		}
+	}
+	for i := range entities {
+		for j := range entities[i].Indexes {
+			idx := &entities[i].Indexes[j]
+			if occurances[idx.Name] > 1 && entities[i].Name != "" {
+				idx.Name = fmt.Sprintf("%s_%s", idx.Name, entities[i].Name)
+			}
+		}
+	}
+}
+
 func deduplicateConstraintNames(entities []SchemaEntity) {
 	occurances := make(map[string]int)
 	for i := range entities {

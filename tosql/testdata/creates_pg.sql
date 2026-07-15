@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS "single_key" (
     "updated_by" UUID NOT NULL,
     PRIMARY KEY ("uuid")
 );
-CREATE INDEX "nuevo_indice" ON "single_key" ("version");
+CREATE INDEX "nuevo_indice_single_key" ON "single_key" ("version");
 
 CREATE TABLE IF NOT EXISTS "post" (
     "uuid" UUID NOT NULL,
@@ -59,5 +59,5 @@ CREATE TABLE IF NOT EXISTS "post" (
         FOREIGN KEY ("user_uuid")
         REFERENCES "user" ("uuid")
 );
-CREATE INDEX "nuevo_indice_2" ON "post" ("slug");
+CREATE INDEX "nuevo_indice_post" ON "post" ("slug");
 
