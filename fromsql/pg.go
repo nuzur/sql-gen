@@ -202,9 +202,16 @@ func (rt *sqlremote) buildFieldsFromPg(tableName string, indexDetails []*pgIndex
 	fields := []*nemgen.Field{}
 	for _, columnDetails := range columnsDetails {
 		f := mapPgColumnDetailsToField(columnDetails, sampleData, indexDetails)
-		if f != nil {
-			fields = append(fields, f)
+		if f == nil {
+			continue
 		}
+		// Fail loudly on an unmapped column type rather than silently dropping the
+		// column: a missing column corrupts the introspected schema and makes the
+		// diff try to DROP a live column. Better to surface the unsupported type.
+		if f.Type == nemgen.FieldType_FIELD_TYPE_INVALID {
+			return nil, fmt.Errorf("unsupported postgres column type %q for %s.%s", columnDetails.DataType, tableName, columnDetails.Name)
+		}
+		fields = append(fields, f)
 	}
 	return fields, nil
 }
@@ -305,7 +312,9 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 	switch dataType {
 	case "uuid":
 		return nemgen.FieldType_FIELD_TYPE_UUID, nil
-	case "char":
+	// Postgres information_schema.columns.data_type reports fixed-length char as
+	// "character" (udt_name bpchar), not "char". Match all spellings.
+	case "char", "character", "bpchar":
 		var max int64 = 0
 		if in.CharMax != nil {
 			max = *in.CharMax
@@ -340,9 +349,11 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 				Size: nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_SIXTY_FOUR_BITS,
 			},
 		}
-	case "double":
+	// information_schema reports these as "double precision" / "real" / "numeric",
+	// not "double" / "decimal".
+	case "double", "double precision", "real":
 		return nemgen.FieldType_FIELD_TYPE_FLOAT, nil
-	case "decimal":
+	case "decimal", "numeric":
 		return nemgen.FieldType_FIELD_TYPE_DECIMAL, nil
 
 	case "varchar", "character varying":
@@ -382,16 +393,16 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 				MaxSize: max,
 			},
 		}
-	case "json":
+	case "json", "jsonb":
 		if sampleData.isJSONArray(in.Name) {
 			return nemgen.FieldType_FIELD_TYPE_ARRAY, nil
 		}
 		return nemgen.FieldType_FIELD_TYPE_JSON, nil
 	case "date":
 		return nemgen.FieldType_FIELD_TYPE_DATE, nil
-	case "timestamp", "timestamp without time zone":
+	case "timestamp", "timestamp without time zone", "timestamp with time zone":
 		return nemgen.FieldType_FIELD_TYPE_DATETIME, nil
-	case "time":
+	case "time", "time without time zone", "time with time zone":
 		return nemgen.FieldType_FIELD_TYPE_TIME, nil
 	}
 	return nemgen.FieldType_FIELD_TYPE_INVALID, nil
@@ -439,15 +450,26 @@ func mapPgIndexDetailsToIndex(in []*pgIndexDetails, fields []*nemgen.Field) *nem
 
 	finalIndexFields := []*nemgen.IndexField{}
 	for _, id := range in {
+		// Skip index columns with no matching field. This shouldn't happen for a
+		// fully-mapped schema, but it guards against emitting an index over a
+		// column that was dropped (e.g. an unrecognized data_type) — which would
+		// produce invalid DDL — and against a nil-pointer deref here.
+		f, ok := indexFields[id.ColumnName]
+		if !ok {
+			continue
+		}
 		order := nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_ASC
 		if !id.Ascending {
 			order = nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_DESC
 		}
 		finalIndexFields = append(finalIndexFields, &nemgen.IndexField{
-			FieldUuid: indexFields[id.ColumnName].Uuid,
+			FieldUuid: f.Uuid,
 			Priority:  id.Seq,
 			Order:     order,
 		})
+	}
+	if len(finalIndexFields) == 0 {
+		return nil
 	}
 
 	return &nemgen.Index{
