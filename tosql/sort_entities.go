@@ -65,12 +65,21 @@ func SortStandaloneEntities(pv *nemgen.ProjectVersion) {
 	// dependency-free entities in input order, then emit breadth-first — so all
 	// "root" tables come first, then the tables that reference them, etc. Input
 	// order is the tie-break, keeping the output stable across runs.
+	// Both loops walk inputOrder rather than ranging over the maps: Go randomizes
+	// map iteration, and a shuffled dependents list changes the order entities
+	// enter the queue as their dependencies clear — which would make the emitted
+	// DDL order differ between runs on the same input.
 	pending := make(map[string]int, len(standalone))
 	dependents := make(map[string][]string, len(standalone))
-	for uuid, targets := range deps {
-		pending[uuid] = len(targets)
-		for target := range targets {
-			dependents[target] = append(dependents[target], uuid)
+	for _, e := range inputOrder {
+		targets := deps[e.Uuid]
+		pending[e.Uuid] = len(targets)
+	}
+	for _, target := range inputOrder {
+		for _, e := range inputOrder {
+			if deps[e.Uuid][target.Uuid] {
+				dependents[target.Uuid] = append(dependents[target.Uuid], e.Uuid)
+			}
 		}
 	}
 
