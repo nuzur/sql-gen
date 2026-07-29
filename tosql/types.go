@@ -38,7 +38,15 @@ func (e SchemaEntity) NumOfNonePKFields() int {
 }
 
 func (e SchemaEntity) IsPrimaryKey(fieldIdentifier string) bool {
-	return slices.Contains(e.PrimaryKeys, fieldIdentifier)
+	// e.PrimaryKeys holds quoted identifiers (`col` / "col") while callers pass
+	// the raw field identifier, so both sides are normalized before comparing.
+	return slices.ContainsFunc(e.PrimaryKeys, func(pk string) bool {
+		return unquoteIdentifier(pk) == unquoteIdentifier(fieldIdentifier)
+	})
+}
+
+func unquoteIdentifier(identifier string) string {
+	return strings.Trim(identifier, "`\"")
 }
 
 func (e SchemaEntity) PrimaryKeysIdentifiers() string {
@@ -53,12 +61,26 @@ func (e SchemaEntity) PrimaryKeysWhereClauseForUpdate() string {
 	return e.PrimaryKeysWhereClauseParam(e.ForGolang, true)
 }
 
+// PrimaryKeysWhereClauseParam renders the primary key WHERE clause. When update
+// is true the clause trails a SET clause built by UpdateFields, so its
+// placeholders continue that clause's numbering instead of restarting at $1.
 func (e SchemaEntity) PrimaryKeysWhereClauseParam(forGolang bool, update bool) string {
-	keys := []string{}
 	offset := 0
 	if update {
-		offset = e.NumOfNonePKFields() - 1
+		offset = e.UpdateFieldsParamCount(false, nil)
 	}
+	return e.PrimaryKeysWhereClauseParamWithOffset(forGolang, offset)
+}
+
+// PrimaryKeysWhereClauseParamWithOffset renders the primary key WHERE clause
+// with positional placeholders starting at offset+1. Callers that build the SET
+// clause from a subset of the entity's fields (data change requests) must pass
+// the number of placeholders that clause actually emitted — see
+// UpdateFieldsParamCount. Deriving the offset from anything else leaves the
+// statement referencing parameters that are never bound, which postgres rejects
+// with "could not determine data type of parameter $N".
+func (e SchemaEntity) PrimaryKeysWhereClauseParamWithOffset(forGolang bool, offset int) string {
+	keys := []string{}
 	for _, pk := range e.PrimaryKeys {
 		// quotes already added to name
 		switch e.DBType {
@@ -93,38 +115,74 @@ func (e SchemaEntity) UpdateFields() string {
 func (e SchemaEntity) UpdateFieldsParam(forGolang bool, onlyWithValue bool, values map[string]string) string {
 	fields := []string{}
 	paramIndex := 0
-	for _, f := range e.Fields {
-		if !f.Field.Key {
-			value, ok := values[f.Field.Uuid]
-			if ok || !onlyWithValue {
-				// Only treat as NULL when the value was explicitly provided and is
-				// empty for a JSON column. When ok is false we're in generic template
-				// generation (onlyWithValue=false, no values map) and must use a
-				// placeholder so the generated template is reusable.
-				if ok && isJSONField(f.Field) && value == "" {
-					switch e.DBType {
-					case db.MYSQLDBType:
-						fields = append(fields, fmt.Sprintf("`%s` = NULL", f.Name))
-					case db.PGDBType:
-						fields = append(fields, fmt.Sprintf(`"%s" = NULL`, f.Name))
-					}
-				} else {
-					paramIndex++
-					switch e.DBType {
-					case db.MYSQLDBType:
-						fields = append(fields, fmt.Sprintf("`%s` = ?", f.Name))
-					case db.PGDBType:
-						if forGolang {
-							fields = append(fields, fmt.Sprintf(`"%s" = $%d`, f.Name, paramIndex))
-						} else {
-							fields = append(fields, fmt.Sprintf(`"%s" = ?`, f.Name))
-						}
-					}
-				}
+	for _, entry := range e.updateFieldEntries(onlyWithValue, values) {
+		if entry.isNull {
+			switch e.DBType {
+			case db.MYSQLDBType:
+				fields = append(fields, fmt.Sprintf("`%s` = NULL", entry.name))
+			case db.PGDBType:
+				fields = append(fields, fmt.Sprintf(`"%s" = NULL`, entry.name))
+			}
+			continue
+		}
+		paramIndex++
+		switch e.DBType {
+		case db.MYSQLDBType:
+			fields = append(fields, fmt.Sprintf("`%s` = ?", entry.name))
+		case db.PGDBType:
+			if forGolang {
+				fields = append(fields, fmt.Sprintf(`"%s" = $%d`, entry.name, paramIndex))
+			} else {
+				fields = append(fields, fmt.Sprintf(`"%s" = ?`, entry.name))
 			}
 		}
 	}
 	return strings.Join(fields, ", ")
+}
+
+// UpdateFieldsParamCount is the number of bound parameters UpdateFieldsParam
+// emits for the same inputs — columns rendered as a literal NULL don't count.
+// This is the offset the trailing primary key WHERE clause must continue from.
+func (e SchemaEntity) UpdateFieldsParamCount(onlyWithValue bool, values map[string]string) int {
+	count := 0
+	for _, entry := range e.updateFieldEntries(onlyWithValue, values) {
+		if !entry.isNull {
+			count++
+		}
+	}
+	return count
+}
+
+// updateFieldEntry is a single column of a SET clause: either a bound parameter
+// or a literal NULL.
+type updateFieldEntry struct {
+	name   string
+	isNull bool
+}
+
+// updateFieldEntries walks the entity's non-key fields in the order the SET
+// clause renders them. UpdateFieldsParam and UpdateFieldsParamCount both build
+// on it so the rendered clause and its parameter count can never disagree.
+func (e SchemaEntity) updateFieldEntries(onlyWithValue bool, values map[string]string) []updateFieldEntry {
+	entries := []updateFieldEntry{}
+	for _, f := range e.Fields {
+		if f.Field.Key {
+			continue
+		}
+		value, ok := values[f.Field.Uuid]
+		if !ok && onlyWithValue {
+			continue
+		}
+		// Only treat as NULL when the value was explicitly provided and is
+		// empty for a JSON column. When ok is false we're in generic template
+		// generation (onlyWithValue=false, no values map) and must use a
+		// placeholder so the generated template is reusable.
+		entries = append(entries, updateFieldEntry{
+			name:   f.Name,
+			isNull: ok && isJSONField(f.Field) && value == "",
+		})
+	}
+	return entries
 }
 
 func (e SchemaEntity) UpdateFieldsWithValues(values map[string]string) string {

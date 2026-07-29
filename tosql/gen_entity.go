@@ -162,7 +162,12 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 	displaySQL := body.String()
 
 	// parametrized sql
+	//
+	// Only the fields carried by params.Values appear in the SET clause, so the
+	// primary key placeholders have to continue from that count rather than
+	// from the entity's field count — see PrimaryKeysWhereClauseParamWithOffset.
 	body.Reset()
+	setParamCount := entityTemplate.UpdateFieldsParamCount(true, params.Values)
 	if err := tpl.Execute(&body, struct {
 		Entity       SchemaEntity
 		UpdateFields string
@@ -170,7 +175,7 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 	}{
 		Entity:       entityTemplate,
 		UpdateFields: entityTemplate.UpdateFieldsParam(true, true, params.Values),
-		WhereClause:  entityTemplate.PrimaryKeysWhereClauseParam(true, true),
+		WhereClause:  entityTemplate.PrimaryKeysWhereClauseParamWithOffset(true, setParamCount),
 	}); err != nil {
 		log.Println("error executing template - ", err)
 		return nil, err
