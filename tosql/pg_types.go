@@ -14,8 +14,11 @@ func FieldTypeToPG(f *nemgen.Field) string {
 	case nemgen.FieldType_FIELD_TYPE_INTEGER: // 2
 		if f.TypeConfig.Integer != nil && f.TypeConfig.Integer.Size != nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_INVALID {
 			switch f.TypeConfig.Integer.Size {
+			// Same reason as the MySQL mapping: an INTEGER must not share a SQL type
+			// with BOOLEAN, or a name-keyed type override has to serve bool and
+			// int64 at once. SMALLINT is the narrowest unambiguous integer type.
 			case nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_ONE_BIT:
-				return "BOOLEAN"
+				return "SMALLINT"
 			case nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_EIGHT_BITS:
 				return "SMALLINT"
 			case nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_SIXTEEN_BITS:

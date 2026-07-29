@@ -14,10 +14,16 @@ func FieldTypeToMYSQL(f *nemgen.Field) string {
 	case nemgen.FieldType_FIELD_TYPE_INTEGER: // 2
 		if f.TypeConfig.Integer != nil && f.TypeConfig.Integer.Size != nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_INVALID {
 			switch f.TypeConfig.Integer.Size {
+			// An INTEGER must never land on TINYINT, which is what BOOLEAN maps to
+			// below. Consumers that pick a Go type per SQL type (sqlc, via
+			// go-code-gen's overrides) key on the type NAME, so a shared TINYINT
+			// forces one Go type on both: BOOLEAN needs bool, INTEGER needs int64,
+			// and whichever loses generates code that does not compile. SMALLINT is
+			// the narrowest unambiguously-integer type, and costs one extra byte.
 			case nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_ONE_BIT:
-				return "TINYINT(1)"
+				return "SMALLINT"
 			case nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_EIGHT_BITS:
-				return "TINYINT"
+				return "SMALLINT"
 			case nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_SIXTEEN_BITS:
 				return "SMALLINT"
 			case nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_TWENTY_FOUR_BITS:
