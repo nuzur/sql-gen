@@ -247,6 +247,161 @@ func TestGenerateUpdateMySQLUsesQuestionMarks(t *testing.T) {
 	assert.Equal(t, len(res.Params), strings.Count(res.ParametrizedSQL, "?"))
 }
 
+// setGenerated marks fields as `generated: true` on a freshly loaded fixture.
+// Nothing in testdata/project_version.json carries the flag, but it is the
+// documented convention for created_at/updated_at, so the insert behavior that
+// depends on it has to be set up explicitly.
+func setGenerated(t *testing.T, e *nemgen.Entity, fieldUUIDs ...string) {
+	t.Helper()
+	wanted := make(map[string]bool, len(fieldUUIDs))
+	for _, id := range fieldUUIDs {
+		wanted[id] = true
+	}
+	found := 0
+	for _, f := range e.Fields {
+		if wanted[f.Uuid] {
+			f.Generated = true
+			found++
+		}
+	}
+	require.Equal(t, len(fieldUUIDs), found, "not every field to mark generated was found on %q", e.Identifier)
+}
+
+// A `created_at datetime, required: true, generated: true` column is emitted by
+// this package's own DDL as `NOT NULL DEFAULT CURRENT_TIMESTAMP`, and upstream
+// validation excuses the caller from supplying a value for it. The insert used to
+// name every column of the entity regardless, binding an explicit NULL for the
+// ones the change request left out — which overrides the default and fails the
+// NOT NULL constraint on postgres (and, on mysql, writes a zero datetime or
+// errors under strict mode). Generated columns must not appear at all.
+func TestGenerateInsertOmitsGeneratedColumns(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testUserEntityUUID)
+	setGenerated(t, entity, userFieldCreatedAt, userFieldUpdatedAt)
+
+	res, err := GenerateInsertForEntityWithValues(context.Background(), GenerateInsertForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.PGDBType,
+		Values: map[string]string{
+			userFieldUUID:    "9b2c1c2e-0000-4000-8000-000000000003",
+			userFieldVersion: "1",
+			userFieldEmail:   "user@nuzur.dev",
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	for _, sql := range []string{res.SQL, res.ParametrizedSQL} {
+		assert.NotContains(t, sql, `"created_at"`, "generated column must not be named in %q", sql)
+		assert.NotContains(t, sql, `"updated_at"`, "generated column must not be named in %q", sql)
+	}
+	assert.Equal(t, []string{"9b2c1c2e-0000-4000-8000-000000000003", "1", "user@nuzur.dev"}, res.Params)
+	assertPGParamsContiguous(t, res.ParametrizedSQL, len(res.Params))
+}
+
+// The counterpart to the above: a column the database won't fill on its own keeps
+// its explicit NULL when the change request omits it. This matters because
+// mapField gives *every* datetime a DEFAULT CURRENT_TIMESTAMP, so dropping absent
+// columns wholesale would silently populate an optional deleted_at and create rows
+// that are already soft-deleted.
+func TestGenerateInsertKeepsAbsentNonGeneratedColumnsAsNull(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testUserEntityUUID)
+	setGenerated(t, entity, userFieldCreatedAt)
+
+	res, err := GenerateInsertForEntityWithValues(context.Background(), GenerateInsertForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.PGDBType,
+		Values: map[string]string{
+			userFieldUUID:    "9b2c1c2e-0000-4000-8000-000000000003",
+			userFieldVersion: "1",
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// updated_at is the same datetime type as created_at and equally absent — the
+	// only difference is the generated flag.
+	assert.NotContains(t, res.ParametrizedSQL, `"created_at"`)
+	assert.Contains(t, res.ParametrizedSQL, `"updated_at"`)
+	assert.Contains(t, res.ParametrizedSQL, "NULL")
+	assert.Len(t, res.Params, 2)
+	assertPGParamsContiguous(t, res.ParametrizedSQL, len(res.Params))
+}
+
+// An auto-increment key is filled by its sequence, and upstream validation grants
+// it the same exemption as a generated field, so it gets the same treatment.
+func TestGenerateInsertOmitsAutoIncrementKey(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testUserEntityUUID)
+	for _, f := range entity.Fields {
+		if f.Uuid == userFieldVersion {
+			f.KeyAutoIncrement = true
+		}
+	}
+
+	res, err := GenerateInsertForEntityWithValues(context.Background(), GenerateInsertForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.PGDBType,
+		Values:         map[string]string{userFieldUUID: "9b2c1c2e-0000-4000-8000-000000000003"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	assert.NotContains(t, res.ParametrizedSQL, `"version"`)
+	assert.Equal(t, []string{"9b2c1c2e-0000-4000-8000-000000000003"}, res.Params)
+}
+
+// mysql binds positionally, so the omitted columns must drop out of the column
+// list and the parameter list together or every remaining value shifts one slot.
+func TestGenerateInsertMySQLOmitsGeneratedColumns(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testUserEntityUUID)
+	setGenerated(t, entity, userFieldCreatedAt, userFieldUpdatedAt)
+
+	res, err := GenerateInsertForEntityWithValues(context.Background(), GenerateInsertForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.MYSQLDBType,
+		Values: map[string]string{
+			userFieldUUID:    "9b2c1c2e-0000-4000-8000-000000000003",
+			userFieldVersion: "1",
+			userFieldEmail:   "user@nuzur.dev",
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	assert.NotContains(t, res.ParametrizedSQL, "`created_at`")
+	assert.NotContains(t, res.ParametrizedSQL, "`updated_at`")
+	assert.NotContains(t, res.ParametrizedSQL, "$")
+	assert.Equal(t, len(res.Params), strings.Count(res.ParametrizedSQL, "?"))
+	assert.Len(t, res.Params, 3)
+}
+
+// `INSERT INTO t () VALUES ()` is invalid on postgres. Upstream validation makes
+// this unreachable, so fail loudly rather than emit a broken statement.
+func TestGenerateInsertWithNothingToInsertErrors(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testUserEntityUUID)
+	fieldUUIDs := []string{}
+	for _, f := range entity.Fields {
+		fieldUUIDs = append(fieldUUIDs, f.Uuid)
+	}
+	setGenerated(t, entity, fieldUUIDs...)
+
+	_, err := GenerateInsertForEntityWithValues(context.Background(), GenerateInsertForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.PGDBType,
+		Values:         map[string]string{},
+	})
+	assert.ErrorContains(t, err, "no insertable values")
+}
+
 // The generic (non-value) template path feeds go-code-gen's generated postgres
 // queries, where every non-key field is in the SET clause. Composite keys used
 // to be numbered one slot too high here as well.

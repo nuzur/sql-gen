@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"text/template"
 	"time"
 
@@ -32,33 +33,64 @@ func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInser
 		return nil, err
 	}
 
-	// go through values and add quotes and escape.
-	// Fields that are absent from Values, or are a JSON type with an empty
-	// value, are treated as SQL NULL. For the parametrized SQL we emit the
-	// NULL keyword directly (no placeholder) so the DB driver never receives
-	// the string "NULL" as a bound parameter value.
-	escapedValues := make(map[string]string)
-	paramsPlaceholders := make(map[string]string)
+	// Build the column list from what the caller actually supplied rather than
+	// from the entity definition.
+	//
+	// A column DEFAULT only applies when the column is omitted from the INSERT;
+	// naming it and passing an explicit NULL overrides the default. So a column
+	// the database fills by itself (dbFilledOnInsert) has to be left out of the
+	// statement entirely when no value was supplied — otherwise a `created_at
+	// NOT NULL DEFAULT CURRENT_TIMESTAMP` gets an explicit NULL and fails the
+	// NOT NULL constraint.
+	//
+	// Every other absent column keeps its explicit NULL. mapField gives *every*
+	// datetime column a DEFAULT CURRENT_TIMESTAMP, so quietly omitting an
+	// optional deleted_at would create rows that are already soft-deleted.
+	//
+	// Columns written as NULL — absent, or a JSON type with an empty value — emit
+	// the NULL keyword directly in the parametrized SQL (no placeholder) so the
+	// DB driver never receives the string "NULL" as a bound parameter value.
+	columns := []string{}
+	displayValues := []string{}
+	placeholders := []string{}
 	paramsValues := []string{}
 	paramIndex := 0
 	for _, f := range entityTemplate.Fields {
 		value, ok := params.Values[f.Field.Uuid]
-		isNull := !ok || (isJSONField(f.Field) && value == "")
-		if isNull {
-			escapedValues[f.Field.Uuid] = "NULL"
-			paramsPlaceholders[f.Field.Uuid] = "NULL"
-		} else {
-			value = coerceParamValue(f.Field, value, params.DBType)
-			escapedValues[f.Field.Uuid] = fmt.Sprintf("'%s'", EscapeValue(value))
-			paramIndex++
-			switch params.DBType {
-			case db.MYSQLDBType:
-				paramsPlaceholders[f.Field.Uuid] = "?"
-			case db.PGDBType:
-				paramsPlaceholders[f.Field.Uuid] = fmt.Sprintf("$%d", paramIndex)
-			}
-			paramsValues = append(paramsValues, value)
+		if !ok && dbFilledOnInsert(f.Field) {
+			continue
 		}
+
+		switch params.DBType {
+		case db.MYSQLDBType:
+			columns = append(columns, fmt.Sprintf("`%s`", f.Name))
+		case db.PGDBType:
+			columns = append(columns, fmt.Sprintf(`"%s"`, f.Name))
+		}
+
+		if !ok || (isJSONField(f.Field) && value == "") {
+			displayValues = append(displayValues, "NULL")
+			placeholders = append(placeholders, "NULL")
+			continue
+		}
+
+		value = coerceParamValue(f.Field, value, params.DBType)
+		displayValues = append(displayValues, fmt.Sprintf("'%s'", EscapeValue(value)))
+		paramIndex++
+		switch params.DBType {
+		case db.MYSQLDBType:
+			placeholders = append(placeholders, "?")
+		case db.PGDBType:
+			placeholders = append(placeholders, fmt.Sprintf("$%d", paramIndex))
+		}
+		paramsValues = append(paramsValues, value)
+	}
+
+	// An INSERT naming no columns is invalid on postgres. Upstream validation
+	// makes this unreachable — non-auto-increment keys are always required — so
+	// this is a diagnostic rather than a path anyone should hit.
+	if len(columns) == 0 {
+		return nil, fmt.Errorf("no insertable values provided for entity %q", entityTemplate.Name)
 	}
 
 	fileName := fmt.Sprintf("%s_%s", "insert_data", params.DBType)
@@ -75,11 +107,13 @@ func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInser
 	// display sql
 	var body bytes.Buffer
 	if err := tpl.Execute(&body, struct {
-		Entity SchemaEntity
-		Values map[string]string
+		Entity  SchemaEntity
+		Columns string
+		Values  string
 	}{
-		Entity: entityTemplate,
-		Values: escapedValues,
+		Entity:  entityTemplate,
+		Columns: strings.Join(columns, ","),
+		Values:  strings.Join(displayValues, ","),
 	}); err != nil {
 		log.Println("error executing template - ", err)
 		return nil, err
@@ -89,11 +123,13 @@ func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInser
 	// parametrized sql
 	body.Reset()
 	if err := tpl.Execute(&body, struct {
-		Entity SchemaEntity
-		Values map[string]string
+		Entity  SchemaEntity
+		Columns string
+		Values  string
 	}{
-		Entity: entityTemplate,
-		Values: paramsPlaceholders,
+		Entity:  entityTemplate,
+		Columns: strings.Join(columns, ","),
+		Values:  strings.Join(placeholders, ","),
 	}); err != nil {
 		log.Println("error executing template - ", err)
 		return nil, err
@@ -288,6 +324,20 @@ func GenerateDeleteForEntityWithValues(ctx context.Context, params GenerateDelet
 		ParametrizedSQL: parametrizedSQL,
 		Params:          paramValues,
 	}, nil
+}
+
+// dbFilledOnInsert reports whether the database supplies this column's value when
+// the INSERT doesn't name it. Generated columns are datetimes that mapField gives a
+// DEFAULT CURRENT_TIMESTAMP, and auto-increment keys get their sequence value —
+// naming either one with an explicit NULL overrides the default and violates NOT
+// NULL. These are exactly the fields upstream validation excuses the caller from
+// supplying (product's datavalidation.isRequired), so the generator has to honor the
+// same exemptions.
+func dbFilledOnInsert(f *nemgen.Field) bool {
+	if f == nil {
+		return false
+	}
+	return f.GetGenerated() || (f.GetKey() && f.GetKeyAutoIncrement())
 }
 
 // coerceParamValue normalizes a stringified field value into the form the SQL
