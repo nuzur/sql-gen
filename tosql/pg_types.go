@@ -98,14 +98,16 @@ func FieldTypeToPG(f *nemgen.Field) string {
 	return ""
 }
 
+// handleFileTypePG is the Postgres half of handleFileTypeMYSQL; see there for
+// why an unset storage_type resolves to object store rather than binary.
 func handleFileTypePG(config *nemgen.FieldTypeFileConfig) string {
-	if config == nil {
+	if config.GetStorageType() == nemgen.FieldTypeFileConfigStorageType_FIELD_TYPE_FILE_CONFIG_STORAGE_TYPE_BINARY {
 		return "BYTEA"
 	}
-	if config.StorageType == nemgen.FieldTypeFileConfigStorageType_FIELD_TYPE_FILE_CONFIG_STORAGE_TYPE_BINARY {
-		return "BYTEA"
-	} else if config.StorageType == nemgen.FieldTypeFileConfigStorageType_FIELD_TYPE_FILE_CONFIG_STORAGE_TYPE_OBJECT_STORE {
-		return "VARCHAR(512)" // default url size
+	if config.GetAllowMultiple() {
+		// a list of object-store references, stored the same way every other
+		// list in the schema is
+		return "JSON"
 	}
-	return "BYTEA"
+	return "VARCHAR(512)" // default url size
 }

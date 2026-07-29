@@ -390,7 +390,10 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 		}
 		return nemgen.FieldType_FIELD_TYPE_FILE, &nemgen.FieldTypeConfig{
 			File: &nemgen.FieldTypeFileConfig{
-				MaxSize: max,
+				// The column holds the bytes themselves, so say so: an unset
+				// storage_type now means object store (a url/key column).
+				StorageType: nemgen.FieldTypeFileConfigStorageType_FIELD_TYPE_FILE_CONFIG_STORAGE_TYPE_BINARY,
+				MaxSize:     max,
 			},
 		}
 	case "json", "jsonb":

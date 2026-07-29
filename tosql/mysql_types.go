@@ -115,28 +115,36 @@ func FieldTypeToMYSQL(f *nemgen.Field) string {
 	return ""
 }
 
+// handleFileTypeMYSQL maps a file/image/audio/video field to its column type.
+//
+// Only BINARY storage puts bytes in the column. Everything else stores a
+// REFERENCE into the object store — a url or key — so the column is text, and
+// with allow_multiple it is a JSON array of them. An unset storage_type
+// resolves to object store, not binary: that is what the platform normalizes a
+// file field to (a storage_config naming an object store, no explicit
+// storage_type), and it is what the generated /upload endpoint produces. The
+// old default of BLOB made the column disagree with the string the domain layer
+// held for exactly those fields. Importers that mean binary say so explicitly
+// (see fromsql), so nothing that is really a blob relies on the default.
 func handleFileTypeMYSQL(config *nemgen.FieldTypeFileConfig) string {
-	if config == nil {
-		return "BLOB"
-	}
-	if config.StorageType == nemgen.FieldTypeFileConfigStorageType_FIELD_TYPE_FILE_CONFIG_STORAGE_TYPE_BINARY {
-		if config.MaxSize == 0 {
+	if config.GetStorageType() == nemgen.FieldTypeFileConfigStorageType_FIELD_TYPE_FILE_CONFIG_STORAGE_TYPE_BINARY {
+		switch {
+		case config.GetMaxSize() == 0:
 			return "BLOB"
-		}
-		if config.MaxSize <= 255 {
+		case config.GetMaxSize() <= 255:
 			return "TINYBLOB"
-		}
-		if config.MaxSize <= 65535 {
+		case config.GetMaxSize() <= 65535:
 			return "BLOB"
-		}
-		if config.MaxSize <= 16777215 {
+		case config.GetMaxSize() <= 16777215:
 			return "MEDIUMBLOB"
-		}
-		if config.MaxSize <= 4294967295 {
+		default:
 			return "LONGBLOB"
 		}
-	} else if config.StorageType == nemgen.FieldTypeFileConfigStorageType_FIELD_TYPE_FILE_CONFIG_STORAGE_TYPE_OBJECT_STORE {
-		return "VARCHAR(512)" // default url size
 	}
-	return "BLOB"
+	if config.GetAllowMultiple() {
+		// a list of object-store references, stored the same way every other
+		// list in the schema is
+		return "JSON"
+	}
+	return "VARCHAR(512)" // default url size
 }
