@@ -36,7 +36,12 @@ CREATE TABLE IF NOT EXISTS "{{$entity.Name}}" (
 
 {{- range $index := $entity.Indexes}}
 {{- if and (ne $index.Type "primary") (ne $index.Type "unique")}}
+{{- $fullText := $index.FullTextExpression}}
+{{- if ne $fullText ""}}
+CREATE INDEX "{{$index.Name}}" ON "{{$entity.Name}}" USING gin ({{$fullText}});
+{{- else}}
 CREATE INDEX "{{$index.Name}}" ON "{{$entity.Name}}" {{$index.FieldNamesIdentifiers}};
+{{- end -}}
 {{- end -}}
 {{- end}}
 

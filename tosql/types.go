@@ -10,6 +10,17 @@ import (
 	"github.com/nuzur/sql-gen/db"
 )
 
+// postgresTextSearchConfig is the text search configuration used when rendering
+// a FULLTEXT index as a Postgres GIN index.
+//
+// 'simple' is deliberate: it lower-cases and splits on non-word characters but
+// applies no stemming and strips no stop words, so it behaves the same for every
+// language. A language-specific configuration such as 'english' gives better
+// recall, but nem carries no language metadata on a field or index, so choosing
+// one would silently impose English stemming on non-English content. Queries
+// must use the same configuration to match this index.
+const postgresTextSearchConfig = "simple"
+
 type SchemaTemplate struct {
 	Entities []SchemaEntity
 }
@@ -279,6 +290,56 @@ func (i SchemaIndex) FieldNamesIdentifiers() string {
 	}
 
 	return fmt.Sprintf("(%s)", strings.Join(fieldsStr, ", "))
+}
+
+// FullTextExpression renders the indexable expression for a FULLTEXT index on
+// Postgres, which has no FULLTEXT index type of its own. The equivalent is a GIN
+// index over to_tsvector(...), so the column list becomes a single tsvector
+// expression.
+//
+// Three details matter:
+//
+//   - The two-argument to_tsvector(regconfig, text) form is required. The
+//     one-argument form resolves the search configuration from a GUC at call
+//     time, making it STABLE rather than IMMUTABLE, and Postgres refuses to
+//     index a non-IMMUTABLE expression.
+//   - Every column is cast to text. A FULLTEXT index is only meaningful over
+//     text, but nothing upstream restricts the declared field types, and
+//     to_tsvector has no overload for e.g. integer. The cast is a no-op for
+//     text columns.
+//   - Each column is wrapped in coalesce. Concatenating a NULL yields NULL, so
+//     a single NULL column would otherwise erase the whole tsvector for that
+//     row and silently drop it from the index.
+//
+// Returns "" for any non-fulltext index or for a non-Postgres dialect, so the
+// template can use a non-empty result as the signal to take the GIN path.
+func (i SchemaIndex) FullTextExpression() string {
+	if i.Type != "fulltext" || i.DBType != db.PGDBType {
+		return ""
+	}
+
+	fields := i.Index.Fields
+	sort.Slice(fields, func(a, b int) bool {
+		return fields[a].Priority < fields[b].Priority
+	})
+
+	parts := []string{}
+	for _, f := range fields {
+		name, found := i.FieldNames[f.FieldUuid]
+		if !found {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf(`coalesce("%s"::text, '')`, name))
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("to_tsvector('%s', %s)",
+		postgresTextSearchConfig,
+		strings.Join(parts, " || ' ' || "),
+	)
 }
 
 // select
