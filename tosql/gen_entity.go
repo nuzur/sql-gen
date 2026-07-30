@@ -47,9 +47,10 @@ func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInser
 	// datetime column a DEFAULT CURRENT_TIMESTAMP, so quietly omitting an
 	// optional deleted_at would create rows that are already soft-deleted.
 	//
-	// Columns written as NULL — absent, or a JSON type with an empty value — emit
-	// the NULL keyword directly in the parametrized SQL (no placeholder) so the
-	// DB driver never receives the string "NULL" as a bound parameter value.
+	// Columns written as NULL — absent, or blank for a type where '' is not a valid
+	// literal (see blankMeansNull) — emit the NULL keyword directly in the
+	// parametrized SQL (no placeholder) so the DB driver never receives the string
+	// "NULL" as a bound parameter value.
 	columns := []string{}
 	displayValues := []string{}
 	placeholders := []string{}
@@ -68,7 +69,7 @@ func GenerateInsertForEntityWithValues(ctx context.Context, params GenerateInser
 			columns = append(columns, fmt.Sprintf(`"%s"`, f.Name))
 		}
 
-		if !ok || (isJSONField(f.Field) && value == "") {
+		if !ok || (blankMeansNull(f.Field) && value == "") {
 			displayValues = append(displayValues, "NULL")
 			placeholders = append(placeholders, "NULL")
 			continue
@@ -222,9 +223,9 @@ func GenerateUpdateForEntityWithValues(ctx context.Context, params GenerateUpdat
 	for _, f := range entityTemplate.Fields {
 		if !f.Field.Key {
 			if value, ok := params.Values[f.Field.Uuid]; ok {
-				// JSON fields with empty value are emitted as NULL literals in
-				// the parametrized SQL, so they must not be added as bound params.
-				if isJSONField(f.Field) && value == "" {
+				// Blank values on non-character columns are emitted as NULL literals
+				// in the parametrized SQL, so they must not be added as bound params.
+				if blankMeansNull(f.Field) && value == "" {
 					continue
 				}
 				paramValues = append(paramValues, coerceParamValue(f.Field, value, params.DBType))

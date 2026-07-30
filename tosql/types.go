@@ -184,13 +184,14 @@ func (e SchemaEntity) updateFieldEntries(onlyWithValue bool, values map[string]s
 		if !ok && onlyWithValue {
 			continue
 		}
-		// Only treat as NULL when the value was explicitly provided and is
-		// empty for a JSON column. When ok is false we're in generic template
-		// generation (onlyWithValue=false, no values map) and must use a
-		// placeholder so the generated template is reusable.
+		// Only treat as NULL when the value was explicitly provided and is blank
+		// for a column where '' is not a valid literal (see blankMeansNull). When
+		// ok is false we're in generic template generation (onlyWithValue=false,
+		// no values map) and must use a placeholder so the generated template is
+		// reusable.
 		entries = append(entries, updateFieldEntry{
 			name:   f.Name,
-			isNull: ok && isJSONField(f.Field) && value == "",
+			isNull: ok && blankMeansNull(f.Field) && value == "",
 		})
 	}
 	return entries
@@ -201,7 +202,7 @@ func (e SchemaEntity) UpdateFieldsWithValues(values map[string]string) string {
 	for _, f := range e.Fields {
 		if !f.Field.Key {
 			if value, ok := values[f.Field.Uuid]; ok {
-				if isJSONField(f.Field) && value == "" {
+				if blankMeansNull(f.Field) && value == "" {
 					switch e.DBType {
 					case db.MYSQLDBType:
 						fields = append(fields, fmt.Sprintf("`%s` = NULL", f.Name))

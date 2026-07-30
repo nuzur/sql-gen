@@ -429,3 +429,74 @@ func TestPrimaryKeyIdentificationIgnoresQuoting(t *testing.T) {
 	assert.False(t, entityTemplate.IsPrimaryKey("email"))
 	assert.Equal(t, 7, entityTemplate.NumOfNonePKFields())
 }
+
+// A blank value on a column where ” is not a valid literal must become the SQL
+// NULL keyword, not a bound empty string. This is what the change-request apply
+// path sends for any field the author left empty: postgres rejects
+// `created_at = ”` outright ("invalid input syntax for type timestamp") and mysql
+// in loose mode coerces it to a zero date.
+func TestGenerateInsertBlankNonCharColumnsBecomeNull(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testUserEntityUUID)
+
+	res, err := GenerateInsertForEntityWithValues(context.Background(), GenerateInsertForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.PGDBType,
+		Values: map[string]string{
+			userFieldUUID:      "u-1",
+			userFieldVersion:   "1",
+			userFieldEmail:     "a@b.com",
+			userFieldPassword:  "", // varchar: '' is a legitimate value, keep it bound
+			userFieldStatus:    "1",
+			userFieldCreatedAt: "", // datetime: must be NULL
+			userFieldUpdatedAt: "", // datetime: must be NULL
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// the two blank datetimes become NULL; the blank varchar keeps its ''
+	assert.Contains(t, res.SQL, "'u-1','1','a@b.com','','1',NULL,NULL",
+		"blank datetimes render as NULL, the blank varchar as ''")
+	assert.Equal(t, 1, countBlankParams(res.Params), "only the varchar contributes a blank bound param")
+	assertPGParamsContiguous(t, res.ParametrizedSQL, len(res.Params))
+}
+
+func TestGenerateUpdateBlankNonCharColumnsBecomeNull(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testUserEntityUUID)
+
+	res, err := GenerateUpdateForEntityWithValues(context.Background(), GenerateUpdateForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.PGDBType,
+		Values: map[string]string{
+			userFieldCreatedAt: "", // clearing a datetime means SET ... = NULL
+			userFieldPassword:  "", // clearing a varchar means SET ... = ''
+			userFieldEmail:     "a@b.com",
+		},
+		Keys: map[string]string{
+			userFieldUUID:    "u-1",
+			userFieldVersion: "1",
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	assert.Contains(t, res.SQL, `"created_at" = NULL`)
+	assert.Contains(t, res.SQL, `"password" = ''`)
+	assert.NotContains(t, res.ParametrizedSQL, `"created_at" = $`,
+		"a NULL column must not consume a placeholder")
+	assertPGParamsContiguous(t, res.ParametrizedSQL, len(res.Params))
+}
+
+func countBlankParams(params []string) int {
+	n := 0
+	for _, p := range params {
+		if p == "" {
+			n++
+		}
+	}
+	return n
+}
