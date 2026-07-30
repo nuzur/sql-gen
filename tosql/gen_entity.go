@@ -456,3 +456,133 @@ func EscapeValue(sql string) string {
 
 	return string(dest)
 }
+
+type GenerateSelectForEntityWithValuesParams struct {
+	Entity         *nemgen.Entity
+	ProjectVersion *nemgen.ProjectVersion
+	DBType         db.DBType
+	ForGolang      bool
+	Keys           map[string]string // field uuid / value — must cover every primary key
+	// Columns are the field uuids to project, in addition to the primary keys.
+	// Empty projects the primary keys alone, which is enough to answer "does this
+	// row exist".
+	Columns []string
+}
+
+// GenerateSelectForEntityWithValues builds a point SELECT of one row by primary
+// key, projecting only the columns the caller asks for.
+//
+// It exists for the read-back the data-change-request apply performs right after
+// writing a row: the automation payload reports the values the database actually
+// holds for server-generated columns (created_at / updated_at / the version
+// token), and a row that cannot be read back is how the apply detects a write
+// that matched nothing. The projection is deliberately caller-controlled rather
+// than SELECT * — the result is delivered to a third-party webhook, so nothing
+// the caller did not name may be read.
+//
+// Returns an error when a primary key has no value in Keys: a partial key would
+// silently widen the statement to a range scan.
+func GenerateSelectForEntityWithValues(ctx context.Context, params GenerateSelectForEntityWithValuesParams) (*GenerateStatementResult, error) {
+	entityTemplate, err := MapEntityToSchemaEntity(params.Entity, params.ProjectVersion, params.DBType, params.ForGolang)
+	if err != nil {
+		return nil, err
+	}
+
+	wanted := map[string]bool{}
+	for _, uuid := range params.Columns {
+		wanted[uuid] = true
+	}
+
+	finalKeys := make(map[string]string)
+	columns := []string{}
+	seen := map[string]bool{}
+	keyCount := 0
+	for _, f := range entityTemplate.Fields {
+		if f.Field.Key {
+			keyCount++
+			value, ok := params.Keys[f.Field.Uuid]
+			if !ok {
+				return nil, fmt.Errorf("missing primary key value for field %q on entity %q", f.Name, entityTemplate.Name)
+			}
+			switch params.DBType {
+			case db.MYSQLDBType:
+				finalKeys[fmt.Sprintf("`%s`", f.Name)] = fmt.Sprintf("'%s'", EscapeValue(value))
+			case db.PGDBType:
+				finalKeys[fmt.Sprintf(`"%s"`, f.Name)] = fmt.Sprintf("'%s'", EscapeValue(value))
+			}
+		}
+		if !f.Field.Key && !wanted[f.Field.Uuid] {
+			continue
+		}
+		if seen[f.Name] {
+			continue
+		}
+		seen[f.Name] = true
+		switch params.DBType {
+		case db.MYSQLDBType:
+			columns = append(columns, fmt.Sprintf("`%s`", f.Name))
+		case db.PGDBType:
+			columns = append(columns, fmt.Sprintf(`"%s"`, f.Name))
+		}
+	}
+	if keyCount == 0 {
+		return nil, fmt.Errorf("entity %q has no primary key to select by", entityTemplate.Name)
+	}
+
+	fileName := fmt.Sprintf("%s_%s", "select_data", params.DBType)
+	tmplBytes, err := templates.ReadFile(fmt.Sprintf("templates/%s.tmpl", fileName))
+	if err != nil {
+		return nil, err
+	}
+
+	tpl, err := template.New("template").Parse(string(tmplBytes))
+	if err != nil {
+		return nil, fmt.Errorf("error creating template: %s %w", fileName, err)
+	}
+
+	type selectTemplateData struct {
+		Entity      SchemaEntity
+		Columns     string
+		WhereClause string
+	}
+
+	// display sql
+	var body bytes.Buffer
+	if err := tpl.Execute(&body, selectTemplateData{
+		Entity:      entityTemplate,
+		Columns:     strings.Join(columns, ", "),
+		WhereClause: entityTemplate.PrimaryKeysWhereClauseWithValues(finalKeys),
+	}); err != nil {
+		log.Println("error executing template - ", err)
+		return nil, err
+	}
+	displaySQL := body.String()
+
+	// parametrized sql — no SET clause precedes the keys here, so the
+	// placeholders start at $1 (offset 0), unlike the update statement.
+	body.Reset()
+	if err := tpl.Execute(&body, selectTemplateData{
+		Entity:      entityTemplate,
+		Columns:     strings.Join(columns, ", "),
+		WhereClause: entityTemplate.PrimaryKeysWhereClauseParamWithOffset(true, 0),
+	}); err != nil {
+		log.Println("error executing template - ", err)
+		return nil, err
+	}
+	parametrizedSQL := body.String()
+
+	paramValues := []string{}
+	for _, f := range entityTemplate.Fields {
+		if f.Field.Key {
+			if value, ok := params.Keys[f.Field.Uuid]; ok {
+				paramValues = append(paramValues, coerceParamValue(f.Field, value, params.DBType))
+			}
+		}
+	}
+
+	return &GenerateStatementResult{
+		SQL:             displaySQL,
+		ParametrizedSQL: parametrizedSQL,
+		Params:          paramValues,
+	}, nil
+}

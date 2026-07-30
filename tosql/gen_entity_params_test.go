@@ -500,3 +500,88 @@ func countBlankParams(params []string) int {
 	}
 	return n
 }
+
+// The apply path reads a row back by primary key right after writing it, to
+// report the database's own values for generated columns and to detect a write
+// that matched nothing. The projection must never widen beyond what the caller
+// named — the result is delivered to a third-party webhook.
+func TestGenerateSelectProjectsOnlyRequestedColumns(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testUserEntityUUID)
+
+	res, err := GenerateSelectForEntityWithValues(context.Background(), GenerateSelectForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.PGDBType,
+		Keys:           map[string]string{userFieldUUID: "u-1", userFieldVersion: "1"},
+		Columns:        []string{userFieldCreatedAt, userFieldUpdatedAt},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	assert.Contains(t, res.SQL, `"created_at"`)
+	assert.Contains(t, res.SQL, `"updated_at"`)
+	assert.NotContains(t, res.SQL, `"email"`, "a column the caller did not ask for must not be read")
+	assert.NotContains(t, res.SQL, `"password"`)
+	assert.Contains(t, res.SQL, `"uuid" = 'u-1'`)
+
+	// keys are always projected so the row can be identified in the result
+	assert.Contains(t, res.SQL, `"uuid"`)
+	assert.Equal(t, []string{"u-1", "1"}, res.Params)
+	assertPGParamsContiguous(t, res.ParametrizedSQL, len(res.Params))
+}
+
+func TestGenerateSelectWithNoColumnsProjectsKeysOnly(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testUserEntityUUID)
+
+	res, err := GenerateSelectForEntityWithValues(context.Background(), GenerateSelectForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.MYSQLDBType,
+		Keys:           map[string]string{userFieldUUID: "u-1", userFieldVersion: "1"},
+	})
+	require.NoError(t, err)
+
+	// composite key entity: both key columns, nothing else
+	assert.Contains(t, res.SQL, "`uuid`")
+	assert.Contains(t, res.SQL, "`version`")
+	assert.NotContains(t, res.SQL, "`email`")
+	assert.NotContains(t, res.SQL, "`created_at`")
+}
+
+func TestGenerateSelectRejectsPartialPrimaryKey(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testUserEntityUUID)
+
+	// `user` has a composite key (uuid + version); supplying only one would
+	// silently widen the point read into a range scan
+	_, err := GenerateSelectForEntityWithValues(context.Background(), GenerateSelectForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.PGDBType,
+		Keys:           map[string]string{userFieldUUID: "u-1"},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing primary key value")
+}
+
+func TestGenerateSelectSinglePrimaryKeyMySQL(t *testing.T) {
+	pv := loadTestProjectVersion(t)
+	entity := testEntity(t, pv, testPostEntityUUID)
+
+	res, err := GenerateSelectForEntityWithValues(context.Background(), GenerateSelectForEntityWithValuesParams{
+		Entity:         entity,
+		ProjectVersion: pv,
+		DBType:         db.MYSQLDBType,
+		Keys:           map[string]string{postFieldUUID: "p-1"},
+		Columns:        []string{postFieldTitle},
+	})
+	require.NoError(t, err)
+
+	assert.Contains(t, res.SQL, "SELECT")
+	assert.Contains(t, res.SQL, "`title`")
+	assert.Contains(t, res.SQL, "`uuid` = 'p-1'")
+	assert.Contains(t, res.ParametrizedSQL, "`uuid` = ?")
+	assert.Equal(t, []string{"p-1"}, res.Params)
+}
