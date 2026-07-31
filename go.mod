@@ -6,7 +6,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/iancoleman/strcase v0.3.0
 	github.com/nuzur/filetools v0.0.3
-	github.com/nuzur/nem v1.1.11
+	github.com/nuzur/nem v1.2.4
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sync v0.20.0
 )
