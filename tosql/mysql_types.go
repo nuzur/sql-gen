@@ -39,7 +39,7 @@ func FieldTypeToMYSQL(f *nemgen.Field) string {
 	case nemgen.FieldType_FIELD_TYPE_FLOAT: // 3
 		return "DOUBLE"
 	case nemgen.FieldType_FIELD_TYPE_DECIMAL: // 4
-		return "DECIMAL"
+		return decimalType(f.GetTypeConfig().GetDecimal())
 	case nemgen.FieldType_FIELD_TYPE_BOOLEAN: // 5
 		return "TINYINT(1)"
 	case nemgen.FieldType_FIELD_TYPE_CHAR: // 6
@@ -106,7 +106,7 @@ func FieldTypeToMYSQL(f *nemgen.Field) string {
 	case nemgen.FieldType_FIELD_TYPE_DATE: // 25
 		return "DATE"
 	case nemgen.FieldType_FIELD_TYPE_DATETIME: // 26
-		return "DATETIME"
+		return datetimeTypeMYSQL(f.GetTypeConfig().GetDatetime())
 	case nemgen.FieldType_FIELD_TYPE_TIME: // 27
 		return "TIME"
 	case nemgen.FieldType_FIELD_TYPE_SLUG: // 28

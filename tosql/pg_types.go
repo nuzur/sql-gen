@@ -36,7 +36,7 @@ func FieldTypeToPG(f *nemgen.Field) string {
 	case nemgen.FieldType_FIELD_TYPE_FLOAT: // 3
 		return "DOUBLE PRECISION"
 	case nemgen.FieldType_FIELD_TYPE_DECIMAL: // 4
-		return "DECIMAL"
+		return decimalType(f.GetTypeConfig().GetDecimal())
 	case nemgen.FieldType_FIELD_TYPE_BOOLEAN: // 5
 		return "BOOLEAN"
 	case nemgen.FieldType_FIELD_TYPE_CHAR: // 6
@@ -89,7 +89,7 @@ func FieldTypeToPG(f *nemgen.Field) string {
 	case nemgen.FieldType_FIELD_TYPE_DATE: // 25
 		return "DATE"
 	case nemgen.FieldType_FIELD_TYPE_DATETIME: // 26
-		return "TIMESTAMP"
+		return datetimeTypePG(f.GetTypeConfig().GetDatetime())
 	case nemgen.FieldType_FIELD_TYPE_TIME: // 27
 		return "TIME"
 	case nemgen.FieldType_FIELD_TYPE_SLUG: // 28

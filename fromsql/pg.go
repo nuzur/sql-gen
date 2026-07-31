@@ -3,12 +3,14 @@ package fromsql
 import (
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gofrs/uuid"
 	nemgen "github.com/nuzur/nem/idl/gen"
+	"github.com/nuzur/sql-gen/tosql"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -20,6 +22,11 @@ type pgColumnDetails struct {
 	IsNullable       string  `db:"is_nullable"`
 	CharMax          *int64  `db:"character_maximum_length"`
 	NumericPrecision *int64  `db:"numeric_precision"`
+	NumericScale     *int64  `db:"numeric_scale"`
+	// DatetimePrecision is the fractional-second precision of a
+	// timestamp/time column, NULL for every other type. Postgres reports 6 for a
+	// bare TIMESTAMP — see pgDatetimePrecision for why that folds back to unset.
+	DatetimePrecision *int64 `db:"datetime_precision"`
 }
 
 type pgIndexDetails struct {
@@ -36,6 +43,10 @@ type pgForeignKeyDetails struct {
 	ColumnName           string `db:"column_name"`
 	ReferencedColumnName string `db:"referenced_column_name"`
 	ReferencedTableName  string `db:"referenced_table_name"`
+	// DeleteRule / UpdateRule are the referential actions, reported as
+	// "NO ACTION" for a constraint created without an explicit clause.
+	DeleteRule string `db:"delete_rule"`
+	UpdateRule string `db:"update_rule"`
 }
 
 func (rt *sqlremote) buildProjectVersionFromPg() (*nemgen.ProjectVersion, error) {
@@ -76,6 +87,14 @@ func (rt *sqlremote) buildProjectVersionFromPg() (*nemgen.ProjectVersion, error)
 		return nil, err
 	}
 
+	// The tables are introspected concurrently, so they land in the slice in
+	// completion order. tosql's topological sort uses input order as its
+	// tie-break, so an unsorted slice emits the same schema's DDL in a different
+	// order run to run.
+	sort.Slice(entities, func(a, b int) bool {
+		return entities[a].Identifier < entities[b].Identifier
+	})
+
 	eg = errgroup.Group{}
 	relationships := []*nemgen.Relationship{}
 	for _, e := range entities {
@@ -94,6 +113,9 @@ func (rt *sqlremote) buildProjectVersionFromPg() (*nemgen.ProjectVersion, error)
 	if err != nil {
 		return nil, err
 	}
+	sort.Slice(relationships, func(a, b int) bool {
+		return relationships[a].Identifier < relationships[b].Identifier
+	})
 
 	return &nemgen.ProjectVersion{
 		Uuid:          uuid.Must(uuid.NewV4()).String(),
@@ -110,13 +132,18 @@ func (rt *sqlremote) buildRelationshipsFromPg(tableName string, entities []*nemg
 			tc.constraint_name, 
 			kcu.column_name, 
 			ccu.table_name AS referenced_table_name,
-			ccu.column_name AS referenced_column_name 
+			ccu.column_name AS referenced_column_name,
+			rc.delete_rule,
+			rc.update_rule
 		FROM information_schema.table_constraints AS tc 
 		JOIN information_schema.key_column_usage AS kcu
 			ON tc.constraint_name = kcu.constraint_name
 			AND tc.table_schema = kcu.table_schema
 		JOIN information_schema.constraint_column_usage AS ccu
 			ON ccu.constraint_name = tc.constraint_name
+		JOIN information_schema.referential_constraints AS rc
+			ON rc.constraint_name = tc.constraint_name
+			AND rc.constraint_schema = tc.table_schema
 		WHERE tc.constraint_type = 'FOREIGN KEY'
 			AND tc.table_schema='%s'
 			AND tc.table_name='%s'
@@ -179,7 +206,9 @@ func (rt *sqlremote) buildFieldsFromPg(tableName string, indexDetails []*pgIndex
 				column_default,
 				is_nullable,
 				character_maximum_length,
-				numeric_precision
+				numeric_precision,
+				numeric_scale,
+				datetime_precision
 				FROM information_schema.columns
 				WHERE table_schema = '%s' 
 				AND table_name = '%s'
@@ -269,6 +298,12 @@ func (rt *sqlremote) buildIndexesFromPg(indexesDetails []*pgIndexDetails, fields
 		}
 	}
 
+	// Go randomizes map iteration; without this the reconstructed schema lists
+	// the same indexes in a different order on every introspection.
+	sort.Slice(indexes, func(a, b int) bool {
+		return indexes[a].Identifier < indexes[b].Identifier
+	})
+
 	return indexes, nil
 }
 
@@ -291,16 +326,21 @@ func mapPgColumnDetailsToField(in *pgColumnDetails, sampleData remoteRows, index
 	}
 
 	fieldType, fieldTypeConfig := mapPgColumnDataTypeToFieldType(in, sampleData)
+	// Same reason as the mysql side: a default the model does not carry is a
+	// column change the plan proposes forever.
+	def := pgColumnDefault(in.DefaultValue)
 	return &nemgen.Field{
-		Uuid:       uuid.Must(uuid.NewV4()).String(),
-		Version:    time.Now().Unix(),
-		Identifier: in.Name,
-		Required:   in.IsNullable == "NO",
-		Type:       fieldType,
-		TypeConfig: fieldTypeConfig,
-		Status:     nemgen.FieldStatus_FIELD_STATUS_ACTIVE,
-		Key:        isKey,
-		Unique:     isUnique,
+		Uuid:                     uuid.Must(uuid.NewV4()).String(),
+		Version:                  time.Now().Unix(),
+		Identifier:               in.Name,
+		Required:                 in.IsNullable == "NO",
+		Type:                     fieldType,
+		TypeConfig:               fieldTypeConfig,
+		Status:                   nemgen.FieldStatus_FIELD_STATUS_ACTIVE,
+		Key:                      isKey,
+		Unique:                   isUnique,
+		DefaultValue:             def.Value,
+		DefaultValueIsExpression: def.IsExpression,
 	}
 }
 
@@ -354,7 +394,18 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 	case "double", "double precision", "real":
 		return nemgen.FieldType_FIELD_TYPE_FLOAT, nil
 	case "decimal", "numeric":
-		return nemgen.FieldType_FIELD_TYPE_DECIMAL, nil
+		// numeric_scale is NULL for an unconstrained NUMERIC (arbitrary
+		// precision), which leaves number_of_decimals unset and renders at the
+		// default scale — see tosql.decimalScale.
+		var scale int64 = 0
+		if in.NumericScale != nil {
+			scale = *in.NumericScale
+		}
+		return nemgen.FieldType_FIELD_TYPE_DECIMAL, &nemgen.FieldTypeConfig{
+			Decimal: &nemgen.FieldTypeDecimalConfig{
+				NumberOfDecimals: scale,
+			},
+		}
 
 	case "varchar", "character varying":
 		var max int64 = 255
@@ -404,7 +455,14 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 	case "date":
 		return nemgen.FieldType_FIELD_TYPE_DATE, nil
 	case "timestamp", "timestamp without time zone", "timestamp with time zone":
-		return nemgen.FieldType_FIELD_TYPE_DATETIME, nil
+		return nemgen.FieldType_FIELD_TYPE_DATETIME, &nemgen.FieldTypeConfig{
+			Datetime: &nemgen.FieldTypeDatetimeConfig{
+				Precision: pgDatetimePrecision(in.DatetimePrecision),
+				// A timestamp column with no default has to say so: an unset
+				// default_value still renders DEFAULT CURRENT_TIMESTAMP.
+				NoDefaultCurrentTimestamp: in.DefaultValue == nil,
+			},
+		}
 	case "time", "time without time zone", "time with time zone":
 		return nemgen.FieldType_FIELD_TYPE_TIME, nil
 	}
@@ -545,6 +603,8 @@ func mapPgFKDetailsToRelationship(in *pgForeignKeyDetails, tableName string, ent
 		Cardinality:   nemgen.RelationshipCardinality_RELATIONSHIP_CARDINALITY_ONE_TO_ONE,
 		CreatedAt:     timestamppb.Now(),
 		UpdatedAt:     timestamppb.Now(),
+		OnDelete:      tosql.ReferentialActionFromSQL(in.DeleteRule),
+		OnUpdate:      tosql.ReferentialActionFromSQL(in.UpdateRule),
 	}
 
 }

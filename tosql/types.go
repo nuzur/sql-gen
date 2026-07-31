@@ -232,7 +232,10 @@ type SchemaField struct {
 	Null      string
 	HasComma  bool
 	Default   string
-	Unique    string
+	// OnUpdate is mysql's ON UPDATE CURRENT_TIMESTAMP clause, empty everywhere
+	// else — postgres has no column-level equivalent (see onUpdateClause).
+	OnUpdate string
+	Unique   string
 }
 
 func (f SchemaField) Postfix() string {
@@ -243,7 +246,28 @@ func (f SchemaField) Postfix() string {
 	if f.Default != "" {
 		res = append(res, f.Default)
 	}
+	// ON UPDATE has to follow DEFAULT: mysql's column definition grammar fixes
+	// that order and rejects the reverse.
+	if f.OnUpdate != "" {
+		res = append(res, f.OnUpdate)
+	}
 	return strings.Join(res, " ")
+}
+
+// mysqlDefaultIndexPrefixLength is the prefix a MySQL index over a TEXT/BLOB
+// column gets when the model states none. MySQL refuses to index those types
+// without one (error 1170) and the failure is a hard error inside CREATE TABLE,
+// so it takes the whole migration with it — a default prefix is the difference
+// between a narrower index and no schema at all. 255 characters stays under
+// InnoDB's 3072-byte key limit even at four bytes per character.
+const mysqlDefaultIndexPrefixLength = 255
+
+// mysqlPrefixRequiredTypes are the column types MySQL cannot index without a
+// prefix length. JSON is deliberately absent: MySQL rejects indexing it with or
+// without a prefix, so there is nothing to default to.
+var mysqlPrefixRequiredTypes = map[string]bool{
+	"TINYTEXT": true, "TEXT": true, "MEDIUMTEXT": true, "LONGTEXT": true,
+	"TINYBLOB": true, "BLOB": true, "MEDIUMBLOB": true, "LONGBLOB": true,
 }
 
 // index
@@ -251,11 +275,34 @@ type SchemaIndex struct {
 	DBType     db.DBType
 	Name       string
 	FieldNames map[string]string
+	// FieldTypes is the resolved column type per field uuid, which is what
+	// decides whether MySQL needs a prefix length for that column.
+	FieldTypes map[string]string
 	Index      *nemgen.Index
 	TypePrefix string
 	Type       string
 	TypeSort   int
 	HasComma   bool
+}
+
+// prefixLength resolves the prefix length to render for one index field on
+// MySQL: the model's own length, else a default for the column types MySQL
+// refuses to index bare. Returns 0 when no prefix should be rendered — always
+// the case for FULLTEXT, which indexes whole columns: MySQL accepts a prefix
+// there and then silently discards it (SUB_PART comes back NULL), so emitting
+// one puts the generated DDL permanently out of step with what the database
+// reports and the diff proposes the index again on every plan.
+func (i SchemaIndex) prefixLength(f *nemgen.IndexField) int64 {
+	if i.DBType != db.MYSQLDBType || i.Type == "fulltext" {
+		return 0
+	}
+	if f.Length > 0 {
+		return f.Length
+	}
+	if mysqlPrefixRequiredTypes[strings.ToUpper(i.FieldTypes[f.FieldUuid])] {
+		return mysqlDefaultIndexPrefixLength
+	}
+	return 0
 }
 
 func (i SchemaIndex) FieldNamesIdentifiers() string {
@@ -272,8 +319,8 @@ func (i SchemaIndex) FieldNamesIdentifiers() string {
 			if f.Order == nemgen.IndexFieldOrder_INDEX_FIELD_ORDER_DESC {
 				orderStr = " DESC"
 			}
-			if f.Length > 0 {
-				fieldsStr = append(fieldsStr, fmt.Sprintf("`%s`(%d)%s", i.FieldNames[f.FieldUuid], f.Length, orderStr))
+			if length := i.prefixLength(f); length > 0 {
+				fieldsStr = append(fieldsStr, fmt.Sprintf("`%s`(%d)%s", i.FieldNames[f.FieldUuid], length, orderStr))
 			} else {
 				if orderStr != "" {
 					fieldsStr = append(fieldsStr, fmt.Sprintf("`%s` %s", i.FieldNames[f.FieldUuid], strings.TrimSpace(orderStr)))
@@ -282,11 +329,12 @@ func (i SchemaIndex) FieldNamesIdentifiers() string {
 				}
 			}
 		} else if i.DBType == db.PGDBType {
-			if f.Length > 0 {
-				fieldsStr = append(fieldsStr, fmt.Sprintf(`"%s"(%d)`, i.FieldNames[f.FieldUuid], f.Length))
-			} else {
-				fieldsStr = append(fieldsStr, fmt.Sprintf(`"%s"`, i.FieldNames[f.FieldUuid]))
-			}
+			// Length is ignored on purpose: postgres has no prefix-index
+			// syntax. `"col"(10)` parses as a function call, which either errors
+			// ("function col(integer) does not exist") or — when the column name
+			// collides with a built-in type such as name/text/date — silently
+			// builds a btree over the constant 10, indexing nothing.
+			fieldsStr = append(fieldsStr, fmt.Sprintf(`"%s"`, i.FieldNames[f.FieldUuid]))
 		}
 	}
 
@@ -370,6 +418,22 @@ type SchemaConstraint struct {
 	FromFields   []SchemaField
 	ToFields     []SchemaField
 	HasComma     bool
+}
+
+// ReferentialActions renders the ON DELETE / ON UPDATE clauses of the foreign
+// key, each on its own line at the indentation the surrounding CONSTRAINT block
+// uses. It returns "" when the relationship states neither — which keeps the
+// generated DDL byte-identical to what it was before referential actions
+// existed, so no deployment sees a diff it did not ask for.
+func (sc SchemaConstraint) ReferentialActions() string {
+	clauses := []string{}
+	if action := ReferentialActionSQL(sc.Relationship.GetOnDelete()); action != "" {
+		clauses = append(clauses, "\n        ON DELETE "+action)
+	}
+	if action := ReferentialActionSQL(sc.Relationship.GetOnUpdate()); action != "" {
+		clauses = append(clauses, "\n        ON UPDATE "+action)
+	}
+	return strings.Join(clauses, "")
 }
 
 func (sc SchemaConstraint) ForeignKeyFields() string {

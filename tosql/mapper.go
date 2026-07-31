@@ -47,11 +47,15 @@ func MapEntityToTypes(e *nemgen.Entity, projectVersion *nemgen.ProjectVersion, d
 
 	// field identifiers map
 	fieldIdentifers := make(map[string]string)
+	// resolved column type per field uuid — mapIndexes needs it to know when
+	// MySQL requires a prefix length for an indexed column
+	fieldTypes := make(map[string]string)
 	for _, f := range e.Fields {
 		if f.Status == nemgen.FieldStatus_FIELD_STATUS_ACTIVE {
 			fieldIdentifers[f.Uuid] = f.Identifier
 			ft := mapField(f, dbType)
 			if ft != nil {
+				fieldTypes[f.Uuid] = ft.Type
 				fields = append(fields, *ft)
 			}
 		}
@@ -59,7 +63,7 @@ func MapEntityToTypes(e *nemgen.Entity, projectVersion *nemgen.ProjectVersion, d
 
 	if e.TypeConfig != nil && e.TypeConfig.Standalone != nil {
 		// map indexes
-		indexes = mapIndexes(e, dbType, fieldIdentifers)
+		indexes = mapIndexes(e, dbType, fieldIdentifers, fieldTypes)
 
 		// map relationships to constraints
 		constraints = mapRelationships(e, projectVersion, dbType)
@@ -132,11 +136,13 @@ func mapField(f *nemgen.Field, dbType db.DBType) *SchemaField {
 		ft.Unique = "UNIQUE"
 	}
 
-	switch f.Type {
-	// TODO add option to disable this in field config
-	case nemgen.FieldType_FIELD_TYPE_DATETIME:
-		ft.Default = "DEFAULT CURRENT_TIMESTAMP"
-	}
+	// The DEFAULT a datetime column used to get unconditionally is now one case
+	// of defaultClause, which an explicit default_value overrides and the
+	// datetime config's no_default_current_timestamp opts out of. An unset
+	// default_value still yields DEFAULT CURRENT_TIMESTAMP on a datetime, so
+	// nothing changes for a model written before per-field defaults existed.
+	ft.Default = defaultClause(f, dbType)
+	ft.OnUpdate = onUpdateClause(f, dbType)
 	return &ft
 }
 
@@ -167,15 +173,17 @@ func mapFieldsToSelectFields(fields []*nemgen.Field, dbType db.DBType) []SchemaS
 
 }
 
-func mapIndexes(e *nemgen.Entity, dbType db.DBType, fieldIdentifers map[string]string) []SchemaIndex {
+func mapIndexes(e *nemgen.Entity, dbType db.DBType, fieldIdentifers map[string]string, fieldTypes map[string]string) []SchemaIndex {
 	indexes := []SchemaIndex{}
 	for _, i := range e.TypeConfig.Standalone.Indexes {
 		if i.Status == nemgen.IndexStatus_INDEX_STATUS_ACTIVE {
 			fieldNames := make(map[string]string)
+			indexFieldTypes := make(map[string]string)
 			for _, fi := range i.Fields {
 				identifier, found := fieldIdentifers[fi.FieldUuid]
 				if found {
 					fieldNames[fi.FieldUuid] = identifier
+					indexFieldTypes[fi.FieldUuid] = fieldTypes[fi.FieldUuid]
 				}
 			}
 
@@ -214,12 +222,15 @@ func mapIndexes(e *nemgen.Entity, dbType db.DBType, fieldIdentifers map[string]s
 				Name:       i.Identifier,
 				Index:      i,
 				FieldNames: fieldNames,
+				FieldTypes: indexFieldTypes,
 				Type:       indexType,
 				TypeSort:   indexTypeSort,
 				TypePrefix: indexTypePrefix,
 			})
 
-			sort.Slice(indexes, func(i, j int) bool {
+			// Stable: indexes of the same kind keep the order the schema lists
+			// them in, so the emitted DDL doesn't reshuffle between runs.
+			sort.SliceStable(indexes, func(i, j int) bool {
 				return indexes[i].TypeSort < indexes[j].TypeSort
 			})
 		}
@@ -240,9 +251,11 @@ func mapIndexes(e *nemgen.Entity, dbType db.DBType, fieldIdentifers map[string]s
 	if !hasPrimary {
 		if pkFields := EntityPrimaryKeys(e); len(pkFields) > 0 {
 			fieldNames := make(map[string]string)
+			indexFieldTypes := make(map[string]string)
 			idxFields := make([]*nemgen.IndexField, 0, len(pkFields))
 			for n, f := range pkFields {
 				fieldNames[f.Uuid] = f.Identifier
+				indexFieldTypes[f.Uuid] = fieldTypes[f.Uuid]
 				idxFields = append(idxFields, &nemgen.IndexField{
 					FieldUuid: f.Uuid,
 					Priority:  int64(n),
@@ -253,6 +266,7 @@ func mapIndexes(e *nemgen.Entity, dbType db.DBType, fieldIdentifers map[string]s
 				Name:       "primary",
 				Index:      &nemgen.Index{Type: nemgen.IndexType_INDEX_TYPE_PRIMARY, Fields: idxFields},
 				FieldNames: fieldNames,
+				FieldTypes: indexFieldTypes,
 				Type:       "primary",
 				TypeSort:   0,
 			}}, indexes...)
