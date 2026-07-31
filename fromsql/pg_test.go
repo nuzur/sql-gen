@@ -62,3 +62,41 @@ func TestMapPgColumnDataTypeToFieldType_Char36UUIDPromotion(t *testing.T) {
 		t.Errorf("char(36) with no sample: got %v, want CHAR", got)
 	}
 }
+
+// TestMapPgVarcharSamplingKeepsWidth is the Postgres half of the finding-11
+// varchar guard. Same rule as MySQL — a promotion may not change the width the
+// column renders at — but different widths: Postgres renders a url field as
+// VARCHAR(2048) and an email as VARCHAR(512), so a varchar(512) of urls that
+// promotes on MySQL must NOT promote here.
+func TestMapPgVarcharSamplingKeepsWidth(t *testing.T) {
+	cases := []struct {
+		name      string
+		column    string
+		width     int64
+		sample    string
+		wantType  nemgen.FieldType
+		wantWidth int64
+	}{
+		{"name is not a url", "full_name", 160, "Ada Lovelace", nemgen.FieldType_FIELD_TYPE_VARCHAR, 160},
+		{"url below the pg url width", "website", 512, "https://example.com/a", nemgen.FieldType_FIELD_TYPE_VARCHAR, 512},
+		{"url at the pg url width", "website", 2048, "https://example.com/a", nemgen.FieldType_FIELD_TYPE_URL, 0},
+		{"address below the email width", "contact_email", 160, "ada@example.com", nemgen.FieldType_FIELD_TYPE_VARCHAR, 160},
+		{"address at the email width", "email", 512, "ada@example.com", nemgen.FieldType_FIELD_TYPE_EMAIL, 0},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in := &pgColumnDetails{Name: tc.column, DataType: "character varying", CharMax: ptrInt64(tc.width)}
+			got, config := mapPgColumnDataTypeToFieldType(in, remoteRows{{tc.column: tc.sample}})
+			if got != tc.wantType {
+				t.Fatalf("%s sampled as %q: got %v, want %v", tc.column, tc.sample, got, tc.wantType)
+			}
+			if tc.wantType != nemgen.FieldType_FIELD_TYPE_VARCHAR {
+				return
+			}
+			if w := config.GetVarchar().GetMaxSize(); w != tc.wantWidth {
+				t.Errorf("max_size = %d, want %d — the reconstruction rewrites the width", w, tc.wantWidth)
+			}
+		})
+	}
+}

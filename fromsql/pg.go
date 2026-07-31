@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofrs/uuid"
 	nemgen "github.com/nuzur/nem/idl/gen"
+	"github.com/nuzur/sql-gen/db"
 	"github.com/nuzur/sql-gen/tosql"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -413,10 +414,13 @@ func mapPgColumnDataTypeToFieldType(in *pgColumnDetails, sampleData remoteRows) 
 			max = *in.CharMax
 		}
 
-		if sampleData.isEmail(in.Name) {
+		// Same width rule as the MySQL mapping: a promotion that would re-render
+		// the column at a different width is refused. Postgres renders an email
+		// at VARCHAR(512) and a url at VARCHAR(2048). See promotionPreservesWidth.
+		if sampleData.isEmail(in.Name) && promotionPreservesWidth(nemgen.FieldType_FIELD_TYPE_EMAIL, db.PGDBType, max) {
 			return nemgen.FieldType_FIELD_TYPE_EMAIL, nil
 		}
-		if sampleData.isURL(in.Name) {
+		if sampleData.isURL(in.Name) && promotionPreservesWidth(nemgen.FieldType_FIELD_TYPE_URL, db.PGDBType, max) {
 			return nemgen.FieldType_FIELD_TYPE_URL, nil
 		}
 		return nemgen.FieldType_FIELD_TYPE_VARCHAR, &nemgen.FieldTypeConfig{

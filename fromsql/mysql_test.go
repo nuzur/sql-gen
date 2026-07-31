@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/gofrs/uuid"
@@ -39,10 +40,36 @@ func lotColumns() []*mysqlColumnDetails {
 		{Name: "id", DataType: "char", ColumnType: "char(36)", ColumnKey: "PRI", IsNullable: "NO", CharMax: ptrInt64(36)},
 		{Name: "price_per_kg", DataType: "decimal", ColumnType: "decimal(38,2)", IsNullable: "YES", NumericPrecision: ptrInt64(38), NumericScale: ptrInt64(2)},
 		{Name: "weight_kg", DataType: "decimal", ColumnType: "decimal(38,9)", IsNullable: "YES", NumericPrecision: ptrInt64(38), NumericScale: ptrInt64(9)},
+		// A non-default-width NOT NULL varchar with data in it: the shape that
+		// churned in production. Sampling has to leave the width alone.
+		{Name: "lot_code", DataType: "varchar", ColumnType: "varchar(64)", IsNullable: "NO", CharMax: ptrInt64(64)},
+		{Name: "warehouse_bin", DataType: "varchar", ColumnType: "varchar(24)", IsNullable: "YES", CharMax: ptrInt64(24)},
+		// Default-width varchars carrying a url and an address: these promote,
+		// because a url/email field renders at exactly 512 on mysql.
+		{Name: "sample_report", DataType: "varchar", ColumnType: "varchar(512)", IsNullable: "YES", CharMax: ptrInt64(512)},
+		{Name: "contact_email", DataType: "varchar", ColumnType: "varchar(512)", IsNullable: "YES", CharMax: ptrInt64(512)},
 		{Name: "body", DataType: "text", ColumnType: "text", ColumnKey: "MUL", IsNullable: "YES", CharMax: ptrInt64(65535)},
 		{Name: "doc", DataType: "blob", ColumnType: "blob", ColumnKey: "MUL", IsNullable: "YES", CharMax: ptrInt64(65535)},
 		{Name: "description", DataType: "text", ColumnType: "text", ColumnKey: "MUL", IsNullable: "YES", CharMax: ptrInt64(65535)},
 	}
+}
+
+// lotSample is one row of sample data as the introspection really receives it.
+// The values are Go strings, not []byte: a MySQL introspection that goes
+// through a local agent gets them that way, because the agent collapses []byte
+// to string before the row crosses the stream (nuzur-cli/agent/handlers.go,
+// encodeValue). Sample-driven type promotion only looks at string values, so
+// this — not the direct sqlx path — is where it fires.
+func lotSample() remoteRows {
+	return remoteRows{{
+		"id":            "11111111-1111-4111-8111-111111111111",
+		"lot_code":      "LOT-2026-0001",
+		"warehouse_bin": "A-14-3",
+		"sample_report": "https://example.com/reports/lot-2026-0001.pdf",
+		"contact_email": "ada@example.com",
+		"body":          "chocolate, red fruit",
+		"price_per_kg":  "12.50",
+	}}
 }
 
 func lotIndexes() [][]*mysqlIndexDetails {
@@ -61,7 +88,7 @@ func lotIndexes() [][]*mysqlIndexDetails {
 func introspectedLot(t *testing.T) *nemgen.Entity {
 	t.Helper()
 
-	sample := remoteRows{{"id": "11111111-1111-4111-8111-111111111111"}}
+	sample := lotSample()
 	fields := []*nemgen.Field{}
 	for _, c := range lotColumns() {
 		fields = append(fields, mapMysqlColumnDetailsToField(c, sample))
@@ -125,6 +152,10 @@ func TestMysqlIntrospectionIsAFixedPoint(t *testing.T) {
 		"    `id` CHAR(36) NOT NULL,\n" +
 		"    `price_per_kg` DECIMAL(38,2),\n" +
 		"    `weight_kg` DECIMAL(38,9),\n" +
+		"    `lot_code` VARCHAR(64) NOT NULL,\n" +
+		"    `warehouse_bin` VARCHAR(24),\n" +
+		"    `sample_report` VARCHAR(512),\n" +
+		"    `contact_email` VARCHAR(512),\n" +
 		"    `body` TEXT,\n" +
 		"    `doc` BLOB,\n" +
 		"    `description` TEXT,\n" +
@@ -136,6 +167,78 @@ func TestMysqlIntrospectionIsAFixedPoint(t *testing.T) {
 
 	if got := renderCreateSQL(t, introspectedLot(t), db.MYSQLDBType); got != want {
 		t.Errorf("re-rendered DDL differs from the DDL that created the database\n got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// TestMysqlVarcharSamplingKeepsWidth is the finding-11 varchar guard.
+//
+// Sample-based promotion re-types a varchar as an email or a url field, and
+// those render at a fixed width (512 on mysql) because they carry no max_size.
+// Promoting a varchar(200) therefore rewrote it to varchar(512), and since the
+// "existing" side of a MySQL diff IS this reconstruction re-rendered as DDL,
+// that produced `MODIFY COLUMN name varchar(200) NOT NULL` on every plan —
+// applied, and back again on the next plan.
+func TestMysqlVarcharSamplingKeepsWidth(t *testing.T) {
+	cases := []struct {
+		name      string
+		column    string
+		width     int64
+		sample    string
+		wantType  nemgen.FieldType
+		wantWidth int64 // only meaningful for VARCHAR
+	}{
+		// url.Parse accepts any of these as a relative reference, which is what
+		// made every populated text column look like a url.
+		{"a person's name", "full_name", 160, "Ada Lovelace", nemgen.FieldType_FIELD_TYPE_VARCHAR, 160},
+		{"a bcrypt hash", "password_hash", 255, "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy", nemgen.FieldType_FIELD_TYPE_VARCHAR, 255},
+		{"a lot code", "lot_code", 64, "LOT-2026-0001", nemgen.FieldType_FIELD_TYPE_VARCHAR, 64},
+		{"a slug", "slug", 220, "finca-la-ilusion", nemgen.FieldType_FIELD_TYPE_VARCHAR, 220},
+		// A real url in a column too narrow for the url field's fixed width:
+		// promoting would widen it, so it stays a varchar of its real size.
+		{"a url in a narrow column", "website", 120, "https://example.com/a", nemgen.FieldType_FIELD_TYPE_VARCHAR, 120},
+		{"an address in a narrow column", "contact_email", 160, "ada@example.com", nemgen.FieldType_FIELD_TYPE_VARCHAR, 160},
+		// At the width the promoted type renders, promotion is a no-op for the
+		// DDL and the modelling nicety is kept.
+		{"a url at the url width", "website", 512, "https://example.com/a", nemgen.FieldType_FIELD_TYPE_URL, 0},
+		{"an address at the email width", "email", 512, "ada@example.com", nemgen.FieldType_FIELD_TYPE_EMAIL, 0},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in := &mysqlColumnDetails{
+				Name: tc.column, DataType: "varchar",
+				ColumnType: "varchar(" + strconv.FormatInt(tc.width, 10) + ")",
+				IsNullable: "NO", CharMax: ptrInt64(tc.width),
+			}
+			got, config := mapMysqlColumnDataTypeToFieldType(in, remoteRows{{tc.column: tc.sample}})
+			if got != tc.wantType {
+				t.Fatalf("%s sampled as %q: got %v, want %v", tc.column, tc.sample, got, tc.wantType)
+			}
+			if tc.wantType != nemgen.FieldType_FIELD_TYPE_VARCHAR {
+				return
+			}
+			if w := config.GetVarchar().GetMaxSize(); w != tc.wantWidth {
+				t.Errorf("max_size = %d, want %d — the width is rewritten, which is a MODIFY COLUMN on every plan", w, tc.wantWidth)
+			}
+		})
+	}
+}
+
+// TestIsURLNeedsSchemeAndHost pins the predicate itself: url.Parse alone accepts
+// almost every string, so isURL used to be true for any populated text column.
+func TestIsURLNeedsSchemeAndHost(t *testing.T) {
+	urls := []string{"https://example.com", "http://example.com/a?b=c", "ftp://host/f"}
+	notURLs := []string{"Ada Lovelace", "LOT-2026-0001", "$2a$10$abcdef", "finca-la-ilusion", "12.50", ""}
+
+	for _, v := range urls {
+		if !(remoteRows{{"col": v}}).isURL("col") {
+			t.Errorf("isURL(%q) = false, want true", v)
+		}
+	}
+	for _, v := range notURLs {
+		if (remoteRows{{"col": v}}).isURL("col") {
+			t.Errorf("isURL(%q) = true — that promotes an ordinary text column to a url field and rewrites its width", v)
+		}
 	}
 }
 

@@ -45,17 +45,25 @@ func (rr remoteRows) isEmail(columnName string) bool {
 	return hasAtLeastOne
 }
 
+// isURL reports whether every sampled value in the column is an absolute URL.
+//
+// url.Parse alone does not answer that question: it accepts almost any string
+// as a relative reference, so "Ada Lovelace" and a bcrypt hash both parse
+// without error. Checking only the error made isURL true for practically every
+// populated text column, which promoted those columns to a url field and
+// re-rendered them at the url width — the varchar churn in finding 11. A URL
+// has to have a scheme and a host.
 func (rr remoteRows) isURL(columnName string) bool {
 	hasAtLeastOne := false
 	for _, r := range rr {
 		value := r[columnName]
 		if value != nil {
 			if reflect.ValueOf(value).Kind() == reflect.String {
-				if _, err := url.Parse(fmt.Sprintf("%v", value)); err != nil {
+				u, err := url.Parse(fmt.Sprintf("%v", value))
+				if err != nil || u.Scheme == "" || u.Host == "" {
 					return false
-				} else {
-					hasAtLeastOne = true
 				}
+				hasAtLeastOne = true
 			}
 		}
 	}

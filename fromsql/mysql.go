@@ -10,6 +10,7 @@ import (
 	"time"
 
 	nemgen "github.com/nuzur/nem/idl/gen"
+	"github.com/nuzur/sql-gen/db"
 	"github.com/nuzur/sql-gen/tosql"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -464,10 +465,14 @@ func mapMysqlColumnDataTypeToFieldType(in *mysqlColumnDetails, sampleData remote
 			max = *in.CharMax
 		}
 
-		if sampleData.isEmail(in.Name) {
+		// Promote only when the promoted type renders the width the column
+		// already has — email and url render at a fixed 512 here, so promoting
+		// anything else silently widens it and the diff proposes MODIFY COLUMN
+		// on every plan forever. See promotionPreservesWidth.
+		if sampleData.isEmail(in.Name) && promotionPreservesWidth(nemgen.FieldType_FIELD_TYPE_EMAIL, db.MYSQLDBType, max) {
 			return nemgen.FieldType_FIELD_TYPE_EMAIL, nil
 		}
-		if sampleData.isURL(in.Name) {
+		if sampleData.isURL(in.Name) && promotionPreservesWidth(nemgen.FieldType_FIELD_TYPE_URL, db.MYSQLDBType, max) {
 			return nemgen.FieldType_FIELD_TYPE_URL, nil
 		}
 		return nemgen.FieldType_FIELD_TYPE_VARCHAR, &nemgen.FieldTypeConfig{
