@@ -16,6 +16,17 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 		return selects
 	}
 
+	// Query names are unique per entity for the whole file, and the primary
+	// select is minted first, so it has to be in the set before any index-derived
+	// name is tested against it. go-code-gen's resolver seeds the same way; without
+	// it a hand-modeled UNIQUE/INDEX over exactly the key column(s) resolves to the
+	// same "<Entity>By<Key>" name and emits it a second time into
+	// select_indexed_simple.sql, where `sqlc generate` aborts on the duplicate query
+	// name and takes the whole generated app with it. EnsureUniqueFieldIndexes
+	// already refuses to synthesize an index over a key field for this reason — this
+	// closes the remaining, hand-modeled case.
+	seenNames := map[string]bool{}
+
 	// add select by primary key(s)
 	primaryKeys := EntityPrimaryKeys(e)
 	if len(primaryKeys) > 0 {
@@ -34,6 +45,7 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 			IsPrimary:        true,
 			SortSupported:    false,
 		})
+		seenNames[nameByID] = true
 	}
 
 	// if there are not indexes return
@@ -57,9 +69,19 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 			if found {
 				ft := field.Type
 				if ft == nemgen.FieldType_FIELD_TYPE_DATETIME || ft == nemgen.FieldType_FIELD_TYPE_DATE {
-					mappedField := mapField(field, dbType)
-					if mappedField != nil {
-						timeFields = append(timeFields, *mappedField)
+					// A time field only earns an ORDER BY variant if the column is
+					// really indexed: the index has to be one the schema emits as an
+					// INDEX/UNIQUE (every other branch below already requires it, this
+					// one silently did not), and the column has to be one the mapper
+					// emits at all — an ORDER BY over a column that never made it into
+					// CREATE TABLE is a query sqlc cannot parse.
+					if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX || i.Type == nemgen.IndexType_INDEX_TYPE_UNIQUE {
+						if usableIndexMember(field) {
+							mappedField := mapField(field, dbType)
+							if mappedField != nil {
+								timeFields = append(timeFields, *mappedField)
+							}
+						}
 					}
 				} else {
 					if i.Type == nemgen.IndexType_INDEX_TYPE_INDEX || i.Type == nemgen.IndexType_INDEX_TYPE_UNIQUE {
@@ -100,7 +122,35 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 	} else {
 		combinations = Combinations(indexIds)
 	}
-	seenNames := map[string]bool{}
+
+	// A real index must always claim its own query name; a combination may only
+	// take a name no index wanted.
+	//
+	// Names are deduped first-emission-wins below, and Combinations enumerates by
+	// bit pattern, so the pair {0,1} (subsetBits=3) is visited before the singleton
+	// {2} (subsetBits=4). Because datetime/date members are dropped from the name,
+	// a pair of composite indexes can union to exactly the field set of some later
+	// single index, steal its name, and — being tagged CombinedIndexes — render only
+	// into select_indexed_combined.sql, which go-code-gen throws away. The real
+	// index's query then exists nowhere while go-code-gen's own resolver still
+	// emits a module wrapper calling it, and the generated app fails to compile.
+	// Emitting every singleton first makes that unreachable.
+	//
+	// Combinations never yields an empty subset (subsetBits starts at 1), so this is
+	// a total partition and nothing is lost. singleIndexSubsets — the
+	// >maxPowerSetIndexes fallback — is all singletons, so this is an identity on it.
+	combinations = singlesFirst(combinations)
+
+	// Two combinations over the same field set produce byte-identical SQL under two
+	// different names (names accrete in index traversal order, WHERE fields are
+	// sorted alphabetically), so combinations are additionally deduped by field set.
+	// Singles are never dropped by field set — go-code-gen mints one wrapper per
+	// index and every one of them must find its query — but they do register their
+	// field set so a later combination cannot re-emit it under a permuted name. The
+	// primary select is deliberately not registered: it is rendered from a different
+	// template branch and an index over the key columns is a different statement.
+	seenFieldSets := map[string]bool{}
+
 	for _, combination := range combinations {
 		name := fmt.Sprintf("%sBy", ToCamelCase(e.Identifier))
 		fields := map[string]SchemaSelectStatementField{}
@@ -115,7 +165,10 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 				_, exists := fields[indexField.FieldUuid]
 				if !exists {
 					field := fieldMap[indexField.FieldUuid]
-					if field != nil && (field.Type == nemgen.FieldType_FIELD_TYPE_DATETIME || field.Type == nemgen.FieldType_FIELD_TYPE_DATE) {
+					if !usableIndexMember(field) {
+						continue
+					}
+					if field.Type == nemgen.FieldType_FIELD_TYPE_DATETIME || field.Type == nemgen.FieldType_FIELD_TYPE_DATE {
 						// datetime/date fields inside composite indexes are excluded from
 						// the WHERE clause, matching go-code-gen's module select resolver
 						// (which names its fetch methods without them)
@@ -148,14 +201,22 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 			return strings.Compare(finalFields[i].Name, finalFields[j].Name) < 0
 		})
 
-		// an index whose fields were all excluded (datetime/date) contributes no
-		// WHERE clause; emitting it would produce an invalid, unnamed select. Two
-		// indexes can also collapse to the same field set after the exclusion —
-		// only the first emission survives (sqlc rejects duplicate query names).
-		if len(finalFields) == 0 || seenNames[name] {
+		// an index whose fields were all excluded (datetime/date, or a column the
+		// mapper does not emit) contributes no WHERE clause; emitting it would
+		// produce an invalid, unnamed select. Two indexes can also collapse to the
+		// same field set after the exclusion — only the first emission survives
+		// (sqlc rejects duplicate query names).
+		//
+		// The field-set test is the same rule one level deeper: PostByTitleAndSlug
+		// and PostBySlugAndTitle are distinct names but the same query. It applies to
+		// combinations only, per seenFieldSets above.
+		combined := len(combination) > 1
+		fieldSetKey := selectFieldSetKey(finalFields)
+		if len(finalFields) == 0 || seenNames[name] || (combined && seenFieldSets[fieldSetKey]) {
 			continue
 		}
 		seenNames[name] = true
+		seenFieldSets[fieldSetKey] = true
 		finalFields[len(finalFields)-1].IsLast = true
 
 		sortSupported := false
@@ -170,7 +231,7 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 			Fields:           finalFields,
 			TimeFields:       timeFields,
 			SortSupported:    sortSupported,
-			CombinedIndexes:  len(combination) > 1,
+			CombinedIndexes:  combined,
 		})
 	}
 
@@ -182,6 +243,57 @@ func ResolveSelectStatements(e *nemgen.Entity, dbType db.DBType) []SchemaSelectS
 // safe upper bound on the work/memory per entity; above it we degrade to one
 // select per index to avoid a combinatorial memory blowup.
 const maxPowerSetIndexes = 8
+
+// usableIndexMember mirrors the column-emission filter the mapper applies
+// (MapEntityToTypes only maps ACTIVE fields, and mapField drops a field with no
+// identifier or an invalid type): a field the mapper will not emit as a column
+// must not appear in a select's name or its WHERE clause, because the column it
+// names is not in the table and sqlc cannot parse the query against it.
+//
+// LOCKSTEP: go-code-gen/core/repo.ResolveSelectStatements is an independent
+// implementation of "which selects does an entity get" and mints one module
+// wrapper per index; the two must agree on the exact set of names, or the
+// generated app calls a query that does not exist. Its usableIndexMember twin
+// applies this identical predicate at the identical point in its member loop.
+// The paired TestResolveSelectStatements_InactiveIndexMemberDropped tests in
+// both repos are the executable contract, and go-code-gen's
+// verifySelectContract fails generation outright if the name sets ever drift.
+func usableIndexMember(f *nemgen.Field) bool {
+	return f != nil &&
+		f.Identifier != "" &&
+		f.Type != nemgen.FieldType_FIELD_TYPE_INVALID &&
+		f.Status == nemgen.FieldStatus_FIELD_STATUS_ACTIVE
+}
+
+// selectFieldSetKey identifies a select by the set of columns it filters on.
+// finalFields is already sorted by name, so the key is order-independent by
+// construction; NUL is the separator because it cannot occur in an identifier and
+// therefore cannot make two different field sets collide.
+func selectFieldSetKey(fields []SchemaSelectStatementField) string {
+	names := make([]string, 0, len(fields))
+	for _, f := range fields {
+		names = append(names, f.Name)
+	}
+	return strings.Join(names, "\x00")
+}
+
+// singlesFirst reorders subsets so that every single-index subset comes before
+// every multi-index one, preserving the relative order within each group. See the
+// call site for why the order is load-bearing.
+func singlesFirst(combinations [][]string) [][]string {
+	ordered := make([][]string, 0, len(combinations))
+	for _, c := range combinations {
+		if len(c) == 1 {
+			ordered = append(ordered, c)
+		}
+	}
+	for _, c := range combinations {
+		if len(c) > 1 {
+			ordered = append(ordered, c)
+		}
+	}
+	return ordered
+}
 
 // singleIndexSubsets returns one single-element subset per index, matching the
 // shape Combinations returns so the caller's loop is unchanged. Used as the

@@ -20,6 +20,10 @@ func buildEntityWithIndexes(n int) *nemgen.Entity {
 			Uuid:       fieldUUID,
 			Identifier: fmt.Sprintf("field_%d", i),
 			Type:       nemgen.FieldType_FIELD_TYPE_UUID, // maps without needing TypeConfig
+			// The resolver only takes index members the mapper emits as columns,
+			// and the mapper emits ACTIVE fields only — an unset status is
+			// FIELD_STATUS_INVALID, which would empty every index here.
+			Status: nemgen.FieldStatus_FIELD_STATUS_ACTIVE,
 		})
 		indexes = append(indexes, &nemgen.Index{
 			Uuid:   fmt.Sprintf("index-%d", i),

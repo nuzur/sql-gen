@@ -2145,6 +2145,90 @@
                             },
                             "created_by_uuid": "00000000-0000-0000-0000-000000000000",
                             "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                        },
+                        {
+                            "uuid": "1a2b3c4d-0001-4a00-9000-000000000001",
+                            "identifier": "idx_post_user_created",
+                            "type": 1,
+                            "fields": [
+                                {
+                                    "field_uuid": "d1b9ac12-d850-49b3-adcb-394e899757ec",
+                                    "priority": 1,
+                                    "order": 1
+                                },
+                                {
+                                    "field_uuid": "5aeef21d-efc2-4662-b6dc-bbb8117266ef",
+                                    "priority": 2,
+                                    "order": 1
+                                }
+                            ],
+                            "status": 1,
+                            "created_at": {
+                                "seconds": 1728263470,
+                                "nanos": 100000000
+                            },
+                            "updated_at": {
+                                "seconds": 1728263470,
+                                "nanos": 100000000
+                            },
+                            "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                            "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                        },
+                        {
+                            "uuid": "1a2b3c4d-0002-4a00-9000-000000000002",
+                            "identifier": "idx_post_status_updated",
+                            "type": 1,
+                            "fields": [
+                                {
+                                    "field_uuid": "8b34cf81-1c02-4d4f-91d3-1d0ee6a469f1",
+                                    "priority": 1,
+                                    "order": 1
+                                },
+                                {
+                                    "field_uuid": "c8e897d2-44c3-47b6-bfad-91642ca13c8f",
+                                    "priority": 2,
+                                    "order": 1
+                                }
+                            ],
+                            "status": 1,
+                            "created_at": {
+                                "seconds": 1728263471,
+                                "nanos": 100000000
+                            },
+                            "updated_at": {
+                                "seconds": 1728263471,
+                                "nanos": 100000000
+                            },
+                            "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                            "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
+                        },
+                        {
+                            "uuid": "1a2b3c4d-0003-4a00-9000-000000000003",
+                            "identifier": "idx_post_user_status",
+                            "type": 1,
+                            "fields": [
+                                {
+                                    "field_uuid": "d1b9ac12-d850-49b3-adcb-394e899757ec",
+                                    "priority": 1,
+                                    "order": 1
+                                },
+                                {
+                                    "field_uuid": "8b34cf81-1c02-4d4f-91d3-1d0ee6a469f1",
+                                    "priority": 2,
+                                    "order": 1
+                                }
+                            ],
+                            "status": 1,
+                            "created_at": {
+                                "seconds": 1728263472,
+                                "nanos": 100000000
+                            },
+                            "updated_at": {
+                                "seconds": 1728263472,
+                                "nanos": 100000000
+                            },
+                            "created_by_uuid": "00000000-0000-0000-0000-000000000000",
+                            "updated_by_uuid": "00000000-0000-0000-0000-000000000000"
                         }
                     ]
                 },

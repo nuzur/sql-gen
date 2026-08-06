@@ -55,6 +55,9 @@ CREATE TABLE IF NOT EXISTS `post` (
     `user_uuid` CHAR(36) NOT NULL,
     PRIMARY KEY (`uuid`),
     INDEX `nuevo_indice` (`slug`),
+    INDEX `idx_post_user_created` (`user_uuid`, `created_at`),
+    INDEX `idx_post_status_updated` (`status`, `updated_at`),
+    INDEX `idx_post_user_status` (`user_uuid`, `status`),
     UNIQUE INDEX `unique_slug` (`slug`),
     UNIQUE INDEX `uq_post_title` (`title`),
     CONSTRAINT `post_user`

@@ -22,18 +22,18 @@ WHERE
     `email` = ? 
 LIMIT ?, ?;        
      
--- name: FetchUserByUUIDAndEmail :many
-SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`
-FROM `user`
-WHERE 
-    `email` = ? AND `uuid` = ? 
-LIMIT ?, ?;        
-     
 -- name: FetchUserByStatus :many
 SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`
 FROM `user`
 WHERE 
     `status` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchUserByUUIDAndEmail :many
+SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`
+FROM `user`
+WHERE 
+    `email` = ? AND `uuid` = ? 
 LIMIT ?, ?;        
      
 -- name: FetchUserByUUIDAndStatus :many
@@ -98,23 +98,6 @@ ORDER BY updated_at DESC
 LIMIT ?, ?;
 
             
--- name: FetchUserByUUIDAndEmailOrderedByUpdatedAtASC :many
-SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`
-FROM `user`
-WHERE 
-    `email` = ? AND `uuid` = ?  
-ORDER BY updated_at ASC
-LIMIT ?, ?;
-
--- name: FetchUserByUUIDAndEmailOrderedByUpdatedAtDESC :many
-SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`
-FROM `user`
-WHERE 
-    `email` = ? AND `uuid` = ?  
-ORDER BY updated_at DESC
-LIMIT ?, ?;
-
-            
 -- name: FetchUserByStatusOrderedByUpdatedAtASC :many
 SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`
 FROM `user`
@@ -128,6 +111,23 @@ SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`c
 FROM `user`
 WHERE 
     `status` = ?  
+ORDER BY updated_at DESC
+LIMIT ?, ?;
+
+            
+-- name: FetchUserByUUIDAndEmailOrderedByUpdatedAtASC :many
+SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`
+FROM `user`
+WHERE 
+    `email` = ? AND `uuid` = ?  
+ORDER BY updated_at ASC
+LIMIT ?, ?;
+
+-- name: FetchUserByUUIDAndEmailOrderedByUpdatedAtDESC :many
+SELECT `uuid`,`version`,`email`,`password`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`
+FROM `user`
+WHERE 
+    `email` = ? AND `uuid` = ?  
 ORDER BY updated_at DESC
 LIMIT ?, ?;
 
@@ -254,6 +254,27 @@ WHERE
     `slug` = ? 
 LIMIT ?, ?;        
      
+-- name: FetchPostByUserUUID :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `user_uuid` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchPostByStatus :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `status` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchPostByUserUUIDAndStatus :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `status` = ? AND `user_uuid` = ? 
+LIMIT ?, ?;        
+     
 -- name: FetchPostByTitleAndSlug :many
 SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
 FROM `post`
@@ -261,11 +282,67 @@ WHERE
     `slug` = ? AND `title` = ? 
 LIMIT ?, ?;        
      
--- name: FetchPostBySlugAndTitle :many
+-- name: FetchPostByTitleAndUserUUID :many
 SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
 FROM `post`
 WHERE 
-    `slug` = ? AND `title` = ? 
+    `title` = ? AND `user_uuid` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchPostBySlugAndUserUUID :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `slug` = ? AND `user_uuid` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchPostByTitleAndSlugAndUserUUID :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `slug` = ? AND `title` = ? AND `user_uuid` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchPostByTitleAndStatus :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `status` = ? AND `title` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchPostBySlugAndStatus :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `slug` = ? AND `status` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchPostByTitleAndSlugAndStatus :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `slug` = ? AND `status` = ? AND `title` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchPostByTitleAndUserUUIDAndStatus :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `status` = ? AND `title` = ? AND `user_uuid` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchPostBySlugAndUserUUIDAndStatus :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `slug` = ? AND `status` = ? AND `user_uuid` = ? 
+LIMIT ?, ?;        
+     
+-- name: FetchPostByTitleAndSlugAndUserUUIDAndStatus :many
+SELECT `uuid`,`version`,`title`,`slug`,`description`,`content`,`status`,`created_at`,`updated_at`,`created_by`,`updated_by`,`media`,`user_uuid`
+FROM `post`
+WHERE 
+    `slug` = ? AND `status` = ? AND `title` = ? AND `user_uuid` = ? 
 LIMIT ?, ?;        
     
 -- name: FetchPostByUUIDForUpdate :many

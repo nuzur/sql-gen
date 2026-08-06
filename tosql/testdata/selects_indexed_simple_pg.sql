@@ -158,6 +158,27 @@ WHERE
     "slug" = ? 
 LIMIT ? OFFSET ?;
         
+-- name: FetchPostByUserUUID :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "user_uuid" = ? 
+LIMIT ? OFFSET ?;
+        
+-- name: FetchPostByStatus :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "status" = ? 
+LIMIT ? OFFSET ?;
+        
+-- name: FetchPostByUserUUIDAndStatus :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "status" = ? AND "user_uuid" = ? 
+LIMIT ? OFFSET ?;
+        
 -- name: FetchPostByUUIDForUpdate :many
 SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
 FROM "post"

@@ -61,4 +61,7 @@ CREATE TABLE IF NOT EXISTS "post" (
         REFERENCES "user" ("uuid")
 );
 CREATE INDEX "nuevo_indice_post" ON "post" ("slug");
+CREATE INDEX "idx_post_user_created" ON "post" ("user_uuid", "created_at");
+CREATE INDEX "idx_post_status_updated" ON "post" ("status", "updated_at");
+CREATE INDEX "idx_post_user_status" ON "post" ("user_uuid", "status");
 

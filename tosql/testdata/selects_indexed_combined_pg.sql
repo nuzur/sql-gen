@@ -22,18 +22,18 @@ WHERE
     "email" = ? 
 LIMIT ? OFFSET ?;        
      
--- name: FetchUserByUUIDAndEmail :many
-SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
-FROM "user"
-WHERE 
-    "email" = ? AND "uuid" = ? 
-LIMIT ? OFFSET ?;        
-     
 -- name: FetchUserByStatus :many
 SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
 FROM "user"
 WHERE 
     "status" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchUserByUUIDAndEmail :many
+SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
+FROM "user"
+WHERE 
+    "email" = ? AND "uuid" = ? 
 LIMIT ? OFFSET ?;        
      
 -- name: FetchUserByUUIDAndStatus :many
@@ -98,23 +98,6 @@ ORDER BY updated_at DESC
 LIMIT ? OFFSET ?;
 
             
--- name: FetchUserByUUIDAndEmailOrderedByUpdatedAtASC :many
-SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
-FROM "user"
-WHERE 
-    "email" = ? AND "uuid" = ?  
-ORDER BY updated_at ASC
-LIMIT ? OFFSET ?;
-
--- name: FetchUserByUUIDAndEmailOrderedByUpdatedAtDESC :many
-SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
-FROM "user"
-WHERE 
-    "email" = ? AND "uuid" = ?  
-ORDER BY updated_at DESC
-LIMIT ? OFFSET ?;
-
-            
 -- name: FetchUserByStatusOrderedByUpdatedAtASC :many
 SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
 FROM "user"
@@ -128,6 +111,23 @@ SELECT "uuid","version","email","password","status","created_at","updated_at","c
 FROM "user"
 WHERE 
     "status" = ?  
+ORDER BY updated_at DESC
+LIMIT ? OFFSET ?;
+
+            
+-- name: FetchUserByUUIDAndEmailOrderedByUpdatedAtASC :many
+SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
+FROM "user"
+WHERE 
+    "email" = ? AND "uuid" = ?  
+ORDER BY updated_at ASC
+LIMIT ? OFFSET ?;
+
+-- name: FetchUserByUUIDAndEmailOrderedByUpdatedAtDESC :many
+SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
+FROM "user"
+WHERE 
+    "email" = ? AND "uuid" = ?  
 ORDER BY updated_at DESC
 LIMIT ? OFFSET ?;
 
@@ -254,6 +254,27 @@ WHERE
     "slug" = ? 
 LIMIT ? OFFSET ?;        
      
+-- name: FetchPostByUserUUID :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "user_uuid" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchPostByStatus :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "status" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchPostByUserUUIDAndStatus :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "status" = ? AND "user_uuid" = ? 
+LIMIT ? OFFSET ?;        
+     
 -- name: FetchPostByTitleAndSlug :many
 SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
 FROM "post"
@@ -261,11 +282,67 @@ WHERE
     "slug" = ? AND "title" = ? 
 LIMIT ? OFFSET ?;        
      
--- name: FetchPostBySlugAndTitle :many
+-- name: FetchPostByTitleAndUserUUID :many
 SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
 FROM "post"
 WHERE 
-    "slug" = ? AND "title" = ? 
+    "title" = ? AND "user_uuid" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchPostBySlugAndUserUUID :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "slug" = ? AND "user_uuid" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchPostByTitleAndSlugAndUserUUID :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "slug" = ? AND "title" = ? AND "user_uuid" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchPostByTitleAndStatus :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "status" = ? AND "title" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchPostBySlugAndStatus :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "slug" = ? AND "status" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchPostByTitleAndSlugAndStatus :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "slug" = ? AND "status" = ? AND "title" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchPostByTitleAndUserUUIDAndStatus :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "status" = ? AND "title" = ? AND "user_uuid" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchPostBySlugAndUserUUIDAndStatus :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "slug" = ? AND "status" = ? AND "user_uuid" = ? 
+LIMIT ? OFFSET ?;        
+     
+-- name: FetchPostByTitleAndSlugAndUserUUIDAndStatus :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "slug" = ? AND "status" = ? AND "title" = ? AND "user_uuid" = ? 
 LIMIT ? OFFSET ?;        
     
 -- name: FetchPostByUUIDForUpdate :many

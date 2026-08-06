@@ -48,21 +48,6 @@ func TestGenMysql(t *testing.T) {
 	os.RemoveAll(res.WorkingDir)
 	os.RemoveAll(res.ZipFile)
 
-	insertsData, err := os.ReadFile("./testdata/inserts_mysql.sql")
-	assert.NoError(t, err)
-	updatesData, err := os.ReadFile("./testdata/updates_mysql.sql")
-	assert.NoError(t, err)
-	deletesData, err := os.ReadFile("./testdata/deletes_mysql.sql")
-	assert.NoError(t, err)
-	createsData, err := os.ReadFile("./testdata/creates_mysql.sql")
-	assert.NoError(t, err)
-	selectsSimpleData, err := os.ReadFile("./testdata/selects_simple_mysql.sql")
-	assert.NoError(t, err)
-	selectsIndexedSimpleData, err := os.ReadFile("./testdata/selects_indexed_simple_mysql.sql")
-	assert.NoError(t, err)
-	selectsIndexedCombinedData, err := os.ReadFile("./testdata/selects_indexed_combined_mysql.sql")
-	assert.NoError(t, err)
-
 	// The cases are the Action constants themselves. Spelling them out as
 	// literals let the select ones drift to "select-indexed-simple" while the
 	// action is "select_indexed_simple", so those three golden files were never
@@ -72,19 +57,19 @@ func TestGenMysql(t *testing.T) {
 		asserted[db.Action] = true
 		switch db.Action {
 		case InsertAction:
-			assert.Equal(t, string(insertsData), db.Data)
+			assertGolden(t, "./testdata/inserts_mysql.sql", db.Data)
 		case UpdateAction:
-			assert.Equal(t, string(updatesData), db.Data)
+			assertGolden(t, "./testdata/updates_mysql.sql", db.Data)
 		case DeleteAction:
-			assert.Equal(t, string(deletesData), db.Data)
+			assertGolden(t, "./testdata/deletes_mysql.sql", db.Data)
 		case CreateAction:
-			assert.Equal(t, string(createsData), db.Data)
+			assertGolden(t, "./testdata/creates_mysql.sql", db.Data)
 		case SelectSimpleAction:
-			assert.Equal(t, string(selectsSimpleData), db.Data)
+			assertGolden(t, "./testdata/selects_simple_mysql.sql", db.Data)
 		case SelectForIndexedSimpleAction:
-			assert.Equal(t, string(selectsIndexedSimpleData), db.Data)
+			assertGolden(t, "./testdata/selects_indexed_simple_mysql.sql", db.Data)
 		case SelectForIndexedCombinedAction:
-			assert.Equal(t, string(selectsIndexedCombinedData), db.Data)
+			assertGolden(t, "./testdata/selects_indexed_combined_mysql.sql", db.Data)
 		}
 	}
 
