@@ -50,6 +50,12 @@ func defaultClause(f *nemgen.Field, dbType db.DBType) string {
 			return "DEFAULT " + defaultExpression(value, dbType)
 		}
 		if bareLiteralFieldTypes[f.GetType()] {
+			// BOOLEAN is the one bare-literal type whose spelling is not the
+			// same on both engines. INTEGER, FLOAT, DECIMAL and ENUM render
+			// verbatim, deliberately.
+			if f.GetType() == nemgen.FieldType_FIELD_TYPE_BOOLEAN {
+				value = booleanDefaultLiteral(value, dbType)
+			}
 			return "DEFAULT " + value
 		}
 		return fmt.Sprintf("DEFAULT '%s'", EscapeValue(value))
@@ -87,6 +93,69 @@ func defaultExpression(value string, dbType db.DBType) string {
 		return value
 	}
 	return "(" + value + ")"
+}
+
+// booleanLiteral resolves the spellings a boolean default_value arrives in onto
+// a single value. "true"/"false" is what a hand-written model stores; "1"/"0" is
+// what a mysql import persists, because mysql reports a TINYINT(1)'s
+// COLUMN_DEFAULT numerically and sql-import saves that into the project version.
+// Both have to mean the same column. Matching is case-insensitive so TRUE, True
+// and true are one value.
+//
+// ok=false means the value is not a boolean spelling at all — see
+// booleanDefaultLiteral for why that is returned unchanged rather than coerced.
+func booleanLiteral(value string) (isTrue bool, ok bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "true", "1":
+		return true, true
+	case "false", "0":
+		return false, true
+	}
+	return false, false
+}
+
+// booleanDefaultLiteral renders a boolean default in the spelling the engine
+// itself reports back, so the DDL generated from the model and the DDL
+// reconstructed by introspecting a live database are the same string.
+//
+// mysql has no boolean type: BOOLEAN renders TINYINT(1), and a column created
+// with DEFAULT true comes back from information_schema.COLUMN_DEFAULT as 1.
+// Introspection passes that through, so the reconstructed "existing" side of a
+// mysql diff renders DEFAULT 1 while the model side renders DEFAULT true. The
+// differ compares the two column definitions as ASTs — BoolVal(true) against
+// Literal{IntVal,"1"} — and those are never equal, so it proposes MODIFY COLUMN
+// on every plan and applying it changes nothing. (vitess has a normalizer for
+// exactly this, but it is gated on the column type being spelled "boolean",
+// which this generator never emits.)
+//
+// Postgres has a real boolean and reports true/false, so it gets the keywords.
+// That also fixes the other direction: a model that stores "1" on a boolean
+// field — every project imported from mysql — rendered BOOLEAN DEFAULT 1, which
+// postgres rejects outright at CREATE TABLE.
+func booleanDefaultLiteral(value string, dbType db.DBType) string {
+	isTrue, ok := booleanLiteral(value)
+	if !ok {
+		// Not a boolean spelling. Introspection types EVERY tinyint(1) as a
+		// BOOLEAN field, so a column someone really declared as
+		// `tinyint(1) DEFAULT 5` arrives here as "5". Rendering DEFAULT 5
+		// reproduces what the database actually has and keeps the round trip a
+		// fixed point; coercing it to 0 would silently rewrite a live default,
+		// and the introspected side would then disagree with the model side on
+		// every plan — the same non-converging diff, from the other direction.
+		// A genuinely invalid value is left to fail at CREATE TABLE, where the
+		// engine's error names the column.
+		return value
+	}
+	if dbType == db.MYSQLDBType {
+		if isTrue {
+			return "1"
+		}
+		return "0"
+	}
+	if isTrue {
+		return "true"
+	}
+	return "false"
 }
 
 // onUpdateClause renders ON UPDATE CURRENT_TIMESTAMP for a datetime field that

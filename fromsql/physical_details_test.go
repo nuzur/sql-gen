@@ -31,6 +31,9 @@ const mysqlPhysicalDetailsDDL = "CREATE TABLE IF NOT EXISTS `parent` (\n" +
 	"    `parent_uuid` CHAR(36),\n" +
 	"    `status` VARCHAR(20) DEFAULT 'active',\n" +
 	"    `qty` INT DEFAULT 5,\n" +
+	"    `active` TINYINT(1) DEFAULT 1,\n" +
+	"    `archived` TINYINT(1) DEFAULT 0,\n" +
+	"    `tri_state` TINYINT(1) DEFAULT 5,\n" +
 	"    `created_at` DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),\n" +
 	"    `updated_at` DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),\n" +
 	"    `plain_ts` DATETIME,\n" +
@@ -49,6 +52,16 @@ func mysqlChildColumns() []*mysqlColumnDetails {
 		{Name: "parent_uuid", DataType: "char", ColumnType: "char(36)", ColumnKey: "MUL", IsNullable: "YES", CharMax: ptrInt64(36)},
 		{Name: "status", DataType: "varchar", ColumnType: "varchar(20)", IsNullable: "YES", CharMax: ptrInt64(20), DefaultValue: ptrString("active")},
 		{Name: "qty", DataType: "int", ColumnType: "int", IsNullable: "YES", DefaultValue: ptrString("5")},
+		// BOOLEAN renders as TINYINT(1), and mysql reports its default
+		// numerically whichever keyword the DDL used — `DEFAULT true` comes back
+		// as 1. Rendering the model side as `DEFAULT true` therefore never
+		// equalled this, and the plan proposed the same MODIFY COLUMN forever.
+		{Name: "active", DataType: "tinyint", ColumnType: "tinyint(1)", IsNullable: "YES", DefaultValue: ptrString("1")},
+		{Name: "archived", DataType: "tinyint", ColumnType: "tinyint(1)", IsNullable: "YES", DefaultValue: ptrString("0")},
+		// A tinyint(1) that is not a boolean at all. Introspection types EVERY
+		// tinyint(1) as BOOLEAN, so this default has to survive verbatim or the
+		// round trip proposes rewriting a live default.
+		{Name: "tri_state", DataType: "tinyint", ColumnType: "tinyint(1)", IsNullable: "YES", DefaultValue: ptrString("5")},
 		{Name: "created_at", DataType: "datetime", ColumnType: "datetime(3)", IsNullable: "YES",
 			DefaultValue: ptrString("CURRENT_TIMESTAMP(3)"), DatetimePrecision: ptrInt64(3), Extra: "DEFAULT_GENERATED"},
 		{Name: "updated_at", DataType: "datetime", ColumnType: "datetime(3)", IsNullable: "YES",
@@ -83,6 +96,18 @@ func TestMysqlIntrospectionKeepsPhysicalDetails(t *testing.T) {
 	}
 	if got := byName["qty"].GetDefaultValue(); got != "5" {
 		t.Errorf("qty default = %q, want \"5\"", got)
+	}
+	if got := byName["active"].GetType(); got != nemgen.FieldType_FIELD_TYPE_BOOLEAN {
+		t.Errorf("tinyint(1) came back as %v, want BOOLEAN", got)
+	}
+	if got := byName["active"].GetDefaultValue(); got != "1" {
+		t.Errorf("active default = %q, want \"1\" — mysql reports a tinyint(1) default numerically", got)
+	}
+	if byName["active"].GetDefaultValueIsExpression() {
+		t.Error("a numeric tinyint default is a literal, not an expression")
+	}
+	if got := byName["tri_state"].GetDefaultValue(); got != "5" {
+		t.Errorf("tri_state default = %q, want \"5\" — a non-boolean tinyint(1) default must survive verbatim", got)
 	}
 	if got := byName["created_at"].GetTypeConfig().GetDatetime().GetPrecision(); got != 3 {
 		t.Errorf("created_at precision = %d, want 3 — DATETIME_PRECISION is the only place it lives", got)
@@ -207,6 +232,8 @@ const pgPhysicalDetailsDDL = "CREATE TABLE IF NOT EXISTS \"parent\" (\n" +
 	"    \"parent_uuid\" CHAR(36),\n" +
 	"    \"status\" VARCHAR(20) DEFAULT 'active',\n" +
 	"    \"qty\" INTEGER DEFAULT 5,\n" +
+	"    \"active\" BOOLEAN DEFAULT true,\n" +
+	"    \"archived\" BOOLEAN DEFAULT false,\n" +
 	"    \"created_at\" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,\n" +
 	"    \"updated_at\" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,\n" +
 	"    \"plain_ts\" TIMESTAMP,\n" +
@@ -226,6 +253,11 @@ func pgChildColumns() []*pgColumnDetails {
 		{Name: "status", DataType: "character varying", IsNullable: "YES", CharMax: ptrInt64(20),
 			DefaultValue: ptrString("'active'::character varying")},
 		{Name: "qty", DataType: "integer", IsNullable: "YES", DefaultValue: ptrString("5")},
+		// Postgres has a real boolean and reports the keyword, so this pair
+		// round-trips both before and after the mysql-side canonicalization —
+		// which is the point: it pins that postgres output does not move.
+		{Name: "active", DataType: "boolean", IsNullable: "YES", DefaultValue: ptrString("true")},
+		{Name: "archived", DataType: "boolean", IsNullable: "YES", DefaultValue: ptrString("false")},
 		{Name: "created_at", DataType: "timestamp without time zone", IsNullable: "YES",
 			DefaultValue: ptrString("CURRENT_TIMESTAMP"), DatetimePrecision: ptrInt64(3)},
 		{Name: "updated_at", DataType: "timestamp without time zone", IsNullable: "YES",

@@ -86,6 +86,67 @@ func TestDefaultClauseLiteralsAndExpressions(t *testing.T) {
 	assert.Equal(t, "DEFAULT 1",
 		defaultClause(literal(nemgen.FieldType_FIELD_TYPE_ENUM, "1"), db.MYSQLDBType))
 
+	// BOOLEAN is the one bare-literal type whose default is respelled per
+	// engine. mysql has no boolean type — BOOLEAN is TINYINT(1) and
+	// COLUMN_DEFAULT reports 1 — so rendering `true` there leaves the model's
+	// DDL permanently unequal to the DDL introspection reconstructs, and the
+	// differ (which compares the two as ASTs: BoolVal(true) against
+	// Literal{IntVal,"1"}) proposes the same MODIFY COLUMN on every plan.
+	// Postgres has a real boolean and reports the keyword back.
+	for _, tc := range []struct {
+		value     string
+		wantMysql string
+		wantPG    string
+	}{
+		{"true", "DEFAULT 1", "DEFAULT true"},
+		{"false", "DEFAULT 0", "DEFAULT false"},
+		// What a mysql import persists into the project version.
+		{"1", "DEFAULT 1", "DEFAULT true"},
+		{"0", "DEFAULT 0", "DEFAULT false"},
+		// Case is not meaningful in either spelling.
+		{"TRUE", "DEFAULT 1", "DEFAULT true"},
+		{"True", "DEFAULT 1", "DEFAULT true"},
+		{"FALSE", "DEFAULT 0", "DEFAULT false"},
+		{"False", "DEFAULT 0", "DEFAULT false"},
+		// Not a boolean spelling: rendered verbatim. Introspection types every
+		// tinyint(1) as BOOLEAN, so a column really declared `tinyint(1)
+		// DEFAULT 5` arrives here as "5" and has to render DEFAULT 5 — coercing
+		// it would rewrite a live default and restart the churn.
+		{"5", "DEFAULT 5", "DEFAULT 5"},
+		{"yes", "DEFAULT yes", "DEFAULT yes"},
+	} {
+		f := literal(nemgen.FieldType_FIELD_TYPE_BOOLEAN, tc.value)
+		assert.Equalf(t, tc.wantMysql, defaultClause(f, db.MYSQLDBType), "mysql, value %q", tc.value)
+		assert.Equalf(t, tc.wantPG, defaultClause(f, db.PGDBType), "postgres, value %q", tc.value)
+	}
+
+	// A boolean with no default gets no clause at all: the empty-value guard
+	// runs before the canonicalizer.
+	assert.Equal(t, "",
+		defaultClause(literal(nemgen.FieldType_FIELD_TYPE_BOOLEAN, ""), db.MYSQLDBType))
+
+	// An expression default is never canonicalized — the expression arm returns
+	// before the bare-literal arm is reached.
+	boolExpr := &nemgen.Field{
+		Identifier:               "col",
+		Type:                     nemgen.FieldType_FIELD_TYPE_BOOLEAN,
+		DefaultValue:             "(TRUE)",
+		DefaultValueIsExpression: true,
+	}
+	assert.Equal(t, "DEFAULT (TRUE)", defaultClause(boolExpr, db.MYSQLDBType))
+	assert.Equal(t, "DEFAULT (TRUE)", defaultClause(boolExpr, db.PGDBType))
+
+	// Adjacent bare-literal types must not be swept in. A 1-bit INTEGER renders
+	// SMALLINT on both engines precisely so it never shares a type with BOOLEAN,
+	// and an ENUM default is an ordinal.
+	oneBit := literal(nemgen.FieldType_FIELD_TYPE_INTEGER, "1")
+	oneBit.TypeConfig = &nemgen.FieldTypeConfig{Integer: &nemgen.FieldTypeIntegerConfig{
+		Size: nemgen.FieldTypeIntegerConfigSize_FIELD_TYPE_INTEGER_CONFIG_SIZE_ONE_BIT,
+	}}
+	assert.Equal(t, "DEFAULT 1", defaultClause(oneBit, db.MYSQLDBType))
+	assert.Equal(t, "DEFAULT 0",
+		defaultClause(literal(nemgen.FieldType_FIELD_TYPE_ENUM, "0"), db.MYSQLDBType))
+
 	// A quote in a literal must not end the literal.
 	assert.Equal(t, `DEFAULT 'o\'brien'`,
 		defaultClause(literal(nemgen.FieldType_FIELD_TYPE_VARCHAR, "o'brien"), db.MYSQLDBType))
