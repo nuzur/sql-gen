@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS "post" (
     "user_uuid" UUID NOT NULL,
     PRIMARY KEY ("uuid"),
     UNIQUE ("slug"),
+    UNIQUE ("title"),
     CONSTRAINT "post_user"
         FOREIGN KEY ("user_uuid")
         REFERENCES "user" ("uuid")

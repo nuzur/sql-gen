@@ -46,6 +46,13 @@ func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, e
 
 	projectVersion := req.ProjectVersion
 
+	// Field-level `unique: true` is sugar for a single-field UNIQUE index, and
+	// this is where it is desugared — before anything reads the index list.
+	// GenerateSQL is the single entry point every consumer goes through,
+	// including nuzur's sql-diff-manager, which hands it a raw (non-normalized)
+	// project version to build the desired state of a diff.
+	EnsureUniqueFieldIndexes(projectVersion)
+
 	SortStandaloneEntities(projectVersion)
 
 	entities := []SchemaEntity{}
@@ -76,10 +83,18 @@ func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, e
 	}
 	results := []ActionResult{}
 
+	// One mutex shared by every action, not one per request. The actions run
+	// concurrently and all append to the same results slice: a per-request mutex
+	// locks nothing anyone else observes, so two actions finishing together race
+	// on the slice header and one of them silently loses its file — the caller
+	// gets a response missing, say, the whole delete script.
+	resultsMu := &sync.Mutex{}
+
 	eg, _ := errgroup.WithContext(ctx)
 	for _, action := range configvalues.Actions {
 		eg.Go(func() error {
 			return GenerateFile(ctx, &GenerateFileRequest{
+				mu:            resultsMu,
 				ExecutionUUID: req.ExecutionUUID,
 				Configvalues:  configvalues,
 				Data:          tpl,
@@ -110,7 +125,10 @@ func GenerateSQL(ctx context.Context, req GenerateRequest) (*GenerateResponse, e
 }
 
 type GenerateFileRequest struct {
-	mu            sync.Mutex
+	// mu guards the append to ActionResults. It is a pointer so concurrent
+	// callers writing to one results slice can share it; nil means the caller
+	// is not sharing (a single, sequential GenerateFile call).
+	mu            *sync.Mutex
 	ExecutionUUID string
 	Configvalues  *ConfigValues
 	Data          SchemaTemplate
@@ -199,12 +217,14 @@ func GenerateFile(ctx context.Context, req *GenerateFileRequest) error {
 	if err != nil {
 		return err
 	}
-	req.mu.Lock()
+	if req.mu != nil {
+		req.mu.Lock()
+		defer req.mu.Unlock()
+	}
 	*req.ActionResults = append(*req.ActionResults, ActionResult{
 		Action: req.Action,
 		Data:   string(data),
 	})
-	req.mu.Unlock()
 
 	return nil
 }

@@ -132,9 +132,11 @@ func mapField(f *nemgen.Field, dbType db.DBType) *SchemaField {
 		Null:      notNull,
 	}
 
-	if f.Unique {
-		ft.Unique = "UNIQUE"
-	}
+	// Note: f.Unique deliberately produces no column-level UNIQUE here. It is
+	// desugared into a real single-field UNIQUE index by EnsureUniqueFieldIndexes,
+	// so uniqueness has exactly one representation in the generated schema; a
+	// column-level constraint on top of it would double-enforce the same rule and
+	// leave the diff engine with a constraint no modeled index accounts for.
 
 	// The DEFAULT a datetime column used to get unconditionally is now one case
 	// of defaultClause, which an explicit default_value overrides and the

@@ -64,23 +64,35 @@ func TestGenPG(t *testing.T) {
 	selectsIndexedCombinedData, err := os.ReadFile("./testdata/selects_indexed_combined_pg.sql")
 	assert.NoError(t, err)
 
+	// The cases are the Action constants themselves. Spelling them out as
+	// literals let the select ones drift to "select-indexed-simple" while the
+	// action is "select_indexed_simple", so those three golden files were never
+	// compared against anything and silently went stale.
+	asserted := map[Action]bool{}
 	for _, db := range res.Results {
+		asserted[db.Action] = true
 		switch db.Action {
-		case "insert":
+		case InsertAction:
 			assert.Equal(t, string(insertsData), db.Data)
-		case "update":
+		case UpdateAction:
 			assert.Equal(t, string(updatesData), db.Data)
-		case "delete":
+		case DeleteAction:
 			assert.Equal(t, string(deletesData), db.Data)
-		case "create":
+		case CreateAction:
 			assert.Equal(t, string(createsData), db.Data)
-		case "select-simple":
+		case SelectSimpleAction:
 			assert.Equal(t, string(selectsSimpleData), db.Data)
-		case "select-indexed-simple":
+		case SelectForIndexedSimpleAction:
 			assert.Equal(t, string(selectsIndexedSimpleData), db.Data)
-		case "select-indexed-combined":
+		case SelectForIndexedCombinedAction:
 			assert.Equal(t, string(selectsIndexedCombinedData), db.Data)
 		}
+	}
+
+	// Every requested action must come back, or an assertion above simply never
+	// ran for it.
+	for _, action := range req.Configvalues.Actions {
+		assert.True(t, asserted[action], "no result for action %s", action)
 	}
 
 }

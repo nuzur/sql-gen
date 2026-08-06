@@ -1,41 +1,65 @@
 
 
 -- user selects:
--- name: FetchUserByUuidAndVersion :many
+-- name: FetchUserByUUIDAndVersion :many
 SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
 FROM "user"
 WHERE 
     "uuid" = ? AND "version" = ? ;
 
         
+-- name: FetchUserByUUID :many
+SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
+FROM "user"
+WHERE 
+    "uuid" = ? 
+LIMIT ? OFFSET ?;
+        
 -- name: FetchUserByEmail :many
 SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
 FROM "user"
 WHERE 
     "email" = ? 
-LIMIT ?, ?;
+LIMIT ? OFFSET ?;
         
 -- name: FetchUserByStatus :many
 SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
 FROM "user"
 WHERE 
     "status" = ? 
-LIMIT ?, ?;
+LIMIT ? OFFSET ?;
         
--- name: FetchUserByUuidAndVersionForUpdate :many
+-- name: FetchUserByUUIDAndVersionForUpdate :many
 SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
 FROM "user"
 WHERE 
     "uuid" = ? AND "version" = ? 
 FOR UPDATE;
         
+-- name: FetchUserByUUIDOrderedByUpdatedAtASC :many
+SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
+FROM "user"
+WHERE 
+    "uuid" = ?  
+ORDER BY updated_at ASC
+LIMIT ? OFFSET ?;
+
+-- name: FetchUserByUUIDOrderedByUpdatedAtDESC :many
+SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
+FROM "user"
+WHERE 
+    "uuid" = ?  
+ORDER BY updated_at DESC
+LIMIT ? OFFSET ?;
+
+            
 -- name: FetchUserByEmailOrderedByUpdatedAtASC :many
 SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
 FROM "user"
 WHERE 
     "email" = ?  
 ORDER BY updated_at ASC
-LIMIT ?, ?;
+LIMIT ? OFFSET ?;
 
 -- name: FetchUserByEmailOrderedByUpdatedAtDESC :many
 SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
@@ -43,7 +67,7 @@ FROM "user"
 WHERE 
     "email" = ?  
 ORDER BY updated_at DESC
-LIMIT ?, ?;
+LIMIT ? OFFSET ?;
 
             
 -- name: FetchUserByStatusOrderedByUpdatedAtASC :many
@@ -52,7 +76,7 @@ FROM "user"
 WHERE 
     "status" = ?  
 ORDER BY updated_at ASC
-LIMIT ?, ?;
+LIMIT ? OFFSET ?;
 
 -- name: FetchUserByStatusOrderedByUpdatedAtDESC :many
 SELECT "uuid","version","email","password","status","created_at","updated_at","created_by","updated_by"
@@ -60,7 +84,7 @@ FROM "user"
 WHERE 
     "status" = ?  
 ORDER BY updated_at DESC
-LIMIT ?, ?;
+LIMIT ? OFFSET ?;
 
             
 
@@ -68,14 +92,14 @@ LIMIT ?, ?;
 
 
 -- folder selects:
--- name: FetchFolderByUuid :many
+-- name: FetchFolderByUUID :many
 SELECT "uuid","version","status","created_at","updated_at","created_by","updated_by"
 FROM "folder"
 WHERE 
     "uuid" = ? ;
 
         
--- name: FetchFolderByUuidForUpdate :many
+-- name: FetchFolderByUUIDForUpdate :many
 SELECT "uuid","version","status","created_at","updated_at","created_by","updated_by"
 FROM "folder"
 WHERE 
@@ -87,14 +111,21 @@ FOR UPDATE;
 
 
 -- single_key selects:
--- name: FetchSingleKeyByUuid :many
+-- name: FetchSingleKeyByUUID :many
 SELECT "uuid","version","status","created_at","updated_at","created_by","updated_by"
 FROM "single_key"
 WHERE 
     "uuid" = ? ;
 
         
--- name: FetchSingleKeyByUuidForUpdate :many
+-- name: FetchSingleKeyByVersion :many
+SELECT "uuid","version","status","created_at","updated_at","created_by","updated_by"
+FROM "single_key"
+WHERE 
+    "version" = ? 
+LIMIT ? OFFSET ?;
+        
+-- name: FetchSingleKeyByUUIDForUpdate :many
 SELECT "uuid","version","status","created_at","updated_at","created_by","updated_by"
 FROM "single_key"
 WHERE 
@@ -106,21 +137,28 @@ FOR UPDATE;
 
 
 -- post selects:
--- name: FetchPostByUuid :many
+-- name: FetchPostByUUID :many
 SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
 FROM "post"
 WHERE 
     "uuid" = ? ;
 
         
+-- name: FetchPostByTitle :many
+SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
+FROM "post"
+WHERE 
+    "title" = ? 
+LIMIT ? OFFSET ?;
+        
 -- name: FetchPostBySlug :many
 SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
 FROM "post"
 WHERE 
     "slug" = ? 
-LIMIT ?, ?;
+LIMIT ? OFFSET ?;
         
--- name: FetchPostByUuidForUpdate :many
+-- name: FetchPostByUUIDForUpdate :many
 SELECT "uuid","version","title","slug","description","content","status","created_at","updated_at","created_by","updated_by","media","user_uuid"
 FROM "post"
 WHERE 

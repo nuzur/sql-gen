@@ -235,7 +235,6 @@ type SchemaField struct {
 	// OnUpdate is mysql's ON UPDATE CURRENT_TIMESTAMP clause, empty everywhere
 	// else — postgres has no column-level equivalent (see onUpdateClause).
 	OnUpdate string
-	Unique   string
 }
 
 func (f SchemaField) Postfix() string {
